@@ -7,7 +7,6 @@ import Footer from './components/Footer'
 import { Routes, Route } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
-import AuthCallback from './pages/AuthCallback'
 
 function App() {
   const Home = () => (
@@ -63,7 +62,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </main>
       <Footer />

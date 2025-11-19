@@ -2,8 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import authRouter from './routes/auth.js';
-import passport from 'passport';
-import googleAuthRouter from './routes/google.js';
 import { getPool } from './mysql.js';
 
 const app = express();
@@ -12,7 +10,6 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 app.use(express.json());
-app.use(passport.initialize());
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -25,7 +22,6 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
-app.use('/api/auth', googleAuthRouter);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
