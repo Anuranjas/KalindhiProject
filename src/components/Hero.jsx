@@ -7,7 +7,7 @@ export default function Hero() {
         className="absolute inset-0 -z-10 bg-cover bg-center"
         style={{
           backgroundImage:
-            'url(https://images.unsplash.com/photo-1565106430487-53a9490cbda4?q=80&w=1600&auto=format&fit=crop)'
+            'url(https://wallpapercave.com/wp/wp8050512.jpg)'
         }}
       />
       <div className="absolute inset-0 -z-10 bg-linear-to-b from-black/40 via-black/30 to-white" />
@@ -23,11 +23,11 @@ export default function Hero() {
           </p>
 
           <div className="mt-8 flex items-center gap-4">
-            <Link to="/" className="rounded-md bg-emerald-600 px-5 py-3 font-medium text-white shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              View Packages
+            <Link to="/?to=packages" className="rounded-md bg-emerald-600 px-5 py-3 font-medium text-white shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              Explore Packages
             </Link>
-            <Link to="/signup" className="rounded-md bg-white/90 px-5 py-3 font-medium text-emerald-700 shadow hover:bg-white">
-              Talk to us
+            <Link to="/?to=contact" className="rounded-md bg-white/90 px-5 py-3 font-medium text-emerald-700 shadow hover:bg-white">
+              Talk to Experts
             </Link>
           </div>
         </div>

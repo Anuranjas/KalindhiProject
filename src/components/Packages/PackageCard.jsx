@@ -1,6 +1,6 @@
 import { formatINR } from "../../data/packages";
 
-export default function PackageCard({ name, price, duration, features, highlight, cta }) {
+export default function PackageCard({ id, name, price, duration, features = [], highlight, onBook, cta }) {
   return (
     <div className={`flex flex-col rounded-2xl border ${highlight ? 'border-emerald-600 shadow-lg shadow-emerald-100' : 'border-slate-200 shadow-sm'} bg-white p-6`}>
       {highlight && (
@@ -26,12 +26,22 @@ export default function PackageCard({ name, price, duration, features, highlight
         ))}
       </ul>
 
-      <a
-        href={cta}
-        className="mt-6 inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-      >
-        Book this package
-      </a>
+      {onBook ? (
+        <button
+          type="button"
+          onClick={() => onBook({ id, name })}
+          className="mt-6 inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          Book this package
+        </button>
+      ) : (
+        <a
+          href={cta}
+          className="mt-6 inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          Book this package
+        </a>
+      )}
     </div>
   );
 }

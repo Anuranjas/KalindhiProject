@@ -1,10 +1,12 @@
+import { Link } from 'react-router-dom';
+
 export default function About() {
   return (
     <section className="py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">About Kerala Trails</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">About Kalindi</h2>
             <p className="mt-4 text-slate-700">
               We’re a locally-rooted travel company crafting authentic Kerala experiences — from tranquil
               backwater cruises to mist-laden tea hills and sun-kissed beaches. Our small, passionate team works
@@ -19,31 +21,31 @@ export default function About() {
             </ul>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#packages" className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">Explore Packages</a>
-              <a href="#contact" className="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-slate-700 font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">Talk to an Expert</a>
+              <Link to="/?to=packages" className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">Explore Packages</Link>
+              <Link to="/?to=contact" className="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-slate-700 font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">Talk to an Expert</Link>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="col-span-2 overflow-hidden rounded-2xl border border-slate-200">
+            <div className="col-span-2 overflow-hidden rounded-md border border-slate-200">
               <img
-                src="https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=1600&auto=format&fit=crop"
+                src="https://wallpapercave.com/wp/wp8050512.jpg"
                 alt="Houseboat on Kerala backwaters"
                 className="h-56 w-full object-cover sm:h-72 md:h-80"
                 loading="lazy"
               />
             </div>
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="overflow-hidden rounded-md border border-slate-200">
               <img
-                src="https://images.unsplash.com/photo-1565106430487-53a9490cbda4?q=80&w=1200&auto=format&fit=crop"
+                src="https://www.keralatourism.org/images/microsites/munnar/munnar.jpg"
                 alt="Munnar tea plantations"
                 className="h-32 w-full object-cover sm:h-40 md:h-44"
                 loading="lazy"
               />
             </div>
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="overflow-hidden rounded-md border border-slate-200">
               <img
-                src="https://images.unsplash.com/photo-1587922445839-1d8033b1bced?q=80&w=1200&auto=format&fit=crop"
+                src="https://lh6.googleusercontent.com/proxy/P7CVYuvqs7WAIrnOLHaxI8isNfRLPq0LQJxF3-11Jx6DZO8wAThJzjV6N6BbbpIpCMWN__5hrVQxRlLnNhOKuusGxq7riBpLbmt80Qu4AMDqI_zorK7Wvnk"
                 alt="Kovalam beach at sunset"
                 className="h-32 w-full object-cover sm:h-40 md:h-44"
                 loading="lazy"

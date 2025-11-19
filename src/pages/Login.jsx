@@ -1,9 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { api } from '../lib/api';
+import logo from '../assets/kalindi-logo.svg';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,7 +19,9 @@ export default function Login() {
       const { token, user } = await api('/api/auth/login', { method: 'POST', body: form });
       localStorage.setItem('auth_token', token);
       localStorage.setItem('auth_user', JSON.stringify(user));
-      navigate('/');
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next');
+      navigate(next || '/');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -25,11 +29,24 @@ export default function Login() {
     }
   };
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-slate-50 py-12 sm:py-16">
-      <div className="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <>
+      <header className="h-16 border-b border-slate-200 bg-white">
+        <nav className="mx-auto h-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <Link to="/" className="flex items-center gap-2 font-semibold text-2xl uppercase text-emerald-700">
+              <img src={logo} alt="Kalindi" className="h-8 w-8" />
+              <span>Kalindi</span>
+            </Link>
+            <div />
+          </div>
+        </nav>
+      </header>
+
+      <main className="min-h-[calc(100vh-4rem)] bg-slate-50 py-12 sm:py-16">
+        <div className="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Log in</h1>
-          <p className="mt-2 text-sm text-slate-600">Welcome back to Kerala Trails.</p>
+          <p className="mt-2 text-sm text-slate-600">Welcome back to Kalindi.</p>
 
           <form className="mt-6 space-y-4" onSubmit={onSubmit}>
             <div>
@@ -48,11 +65,12 @@ export default function Login() {
           </form>
 
           <p className="mt-4 text-sm text-slate-600">Don't have an account? <Link to="/signup" className="text-emerald-700 hover:underline">Sign up</Link></p>
-          <div className="mt-6 text-center text-xs text-slate-500">
-            <Link to="/" className="hover:underline">Back to home</Link>
+            <div className="mt-6 text-center text-xs text-slate-500">
+              <Link to="/" className="hover:underline">Back to home</Link>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
