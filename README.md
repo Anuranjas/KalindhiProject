@@ -1,16 +1,71 @@
-# React + Vite
+# Kalindhi - Kerala Tourism Booking Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Kalindhi is a comprehensive full-stack web application designed for browsing and booking curated tour packages in Kerala. From the serene backwaters of Alleppey to the misty hills of Munnar, Kalindhi provides a seamless experience for travelers to plan their perfect getaway.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Package Discovery**: Browse a variety of tour packages categorized by duration, price, and highlights.
+- **User Authentication**: Secure Login and Signup functionality using JWT.
+- **Booking Management**: Easy-to-use booking interface for selecting travel dates, number of people, and preferred transport.
+- **Smooth Navigation**: User-friendly single-page application (SPA) with smooth scrolling to key sections like Packages and Contact.
+- **Responsive Design**: Fully responsive UI built with Tailwind CSS, ensuring a great experience on both mobile and desktop.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Frontend
+- **React.js**: A library for building interactive user interfaces.
+- **Vite**: A fast build tool for modern web development.
+- **Tailwind CSS**: A utility-first CSS framework for rapid UI development.
+- **React Router**: For handling client-side routing.
 
-## Expanding the ESLint configuration
+### Backend
+- **Node.js**: JavaScript runtime for building the server.
+- **Express.js**: Web framework for building RESTful APIs.
+- **MySQL**: Relational database for storing user data, packages, and bookings.
+- **JWT (JSON Web Tokens)**: Used for secure user authentication.
+- **Bcrypt.js**: For hashing and securing user passwords.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 📂 Project Structure
+
+- `src/`: Contains the frontend React application.
+  - `components/`: Reusable UI components (Navbar, Hero, Footer, etc.).
+  - `pages/`: Individual pages for Login, Signup, and Booking.
+  - `data/`: Local data constants, such as package details.
+- `server/`: Contains the Node.js/Express backend.
+  - `src/routes/`: API routes for authentication and booking logic.
+  - `schema.sql`: Database schema and initial seed data.
+
+## 🏁 Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- MySQL Server
+
+### Database Setup
+1. Create a MySQL database named `kalindhi`.
+2. Run the SQL script found in `server/schema.sql` to set up the tables and seed data.
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd KalindhiProject
+   ```
+
+2. **Frontend Setup**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+3. **Backend Setup**
+   ```bash
+   cd server
+   npm install
+   # Create a .env file and set your DB credentials
+   npm run dev
+   ```
+
+---
+Built with ❤️ for a better Kerala travel experience.

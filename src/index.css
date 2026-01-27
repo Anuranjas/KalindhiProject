@@ -1,6 +1,37 @@
 @import "tailwindcss";
 
-/* App-wide tweaks (optional) */
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Manrope", sans-serif;
+  --color-primary: #1a2e1a; /* Deep Jungle Green */
+  --color-accent: #c5a059;  /* Muted Gold */
+  --color-sand: #fdfaf5;
+}
+
+/* App-wide tweaks */
 html, body, #root {
 	height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-sand);
+  color: var(--color-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .serif {
+  font-family: var(--font-serif);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.heading-lg {
+  @apply text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tight;
+}
+
+.heading-md {
+  @apply text-4xl md:text-5xl lg:text-6xl leading-[1.1] tracking-tight;
 }

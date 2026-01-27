@@ -7,6 +7,9 @@ import Footer from './components/Footer'
 import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import BookPackage from './pages/BookPackage'
+import Profile from './pages/Profile'
+import AdminLogin from './pages/AdminLogin'
 import { useEffect, useRef } from 'react'
 
 function ProtectedLayout() {
@@ -30,10 +33,85 @@ function ProtectedLayout() {
   );
 }
 
+const Home = ({ packagesRef, contactRef, aboutRef }) => (
+  <>
+    <Hero />
+    <div ref={aboutRef}>
+      <About />
+    </div>
+    <div ref={packagesRef}>
+      <PackagesSection />
+    </div>
+    <section ref={contactRef} className="py-24 md:py-40 bg-sand">
+      <div className="mx-auto max-w-7xl px-6 lg:px-12">
+        <div className="grid gap-20 lg:grid-cols-2">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent/80 block mb-6">Connect</span>
+            <h2 className="heading-md serif text-primary mb-12">Ready to <span className="italic">begin</span> your <br />story?</h2>
+            
+            <div className="space-y-12">
+              <div>
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 mb-4">Direct Message</h4>
+                <p className="text-xl serif italic text-primary">+91-90000-00000</p>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 mb-4">Electronic Mail</h4>
+                <p className="text-xl serif italic text-primary">concierge@kalindi.trail</p>
+              </div>
+              <div className="max-w-sm">
+                <p className="text-sm text-primary/60 font-light leading-relaxed">
+                  Our consultants typically respond within 24 hours to craft your definitive itinerary.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const data = Object.fromEntries(new FormData(form));
+              import('./lib/api').then(({ api }) =>
+                api('/api/contact', { method: 'POST', body: { name: data.name, email: data.email, message: data.message } })
+              ).then(() => {
+                alert('We have received your request. A consultant will be in touch shortly.');
+                form.reset();
+              }).catch((err) => alert(err.message));
+            }}
+            className="flex flex-col gap-10"
+          >
+            <div className="space-y-10">
+              <div className="group relative border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+                <label htmlFor="contact-name" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Full Name</label>
+                <input id="contact-name" name="name" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="Aiden Smith" />
+              </div>
+              <div className="group relative border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+                <label htmlFor="contact-email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Email Address</label>
+                <input id="contact-email" name="email" type="email" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="aiden@example.com" />
+              </div>
+              <div className="group relative border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+                <label htmlFor="contact-message" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Your Preferences</label>
+                <textarea id="contact-message" name="message" rows="2" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none resize-none placeholder:text-primary/10" placeholder="Let us know your interests..." />
+              </div>
+            </div>
+            
+            <button type="submit" className="self-start group flex items-center gap-6 px-12 py-5 bg-primary text-white rounded-full transition-all hover:bg-accent hover:-translate-y-1 active:translate-y-0">
+              <span className="text-[11px] font-bold uppercase tracking-[0.3em]">Send Inquiry</span>
+              <span className="text-xl transition-transform group-hover:translate-x-1">→</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </>
+);
+
 function App() {
   const packagesRef = useRef(null);
   const contactRef = useRef(null);
+  const aboutRef = useRef(null);
   const location = useLocation();
+  const isAdminPage = location.pathname.startsWith('/admin-login');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -41,75 +119,29 @@ function App() {
     let el = null;
     if (to === 'packages') el = packagesRef.current;
     if (to === 'contact') el = contactRef.current;
+    if (to === 'about') el = aboutRef.current;
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [location.search]);
-  const Home = () => (
-    <>
-      <Hero />
-      <About />
-      <div ref={packagesRef}>
-        <PackagesSection />
-      </div>
-      <section ref={contactRef} className="py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Contact us</h2>
-              <p className="mt-3 text-slate-600">Tell us your travel dates and preferences — we’ll share a custom itinerary and transparent quote.</p>
-              <p className="mt-2 text-slate-600">Our team usually replies within a few hours during business days. Share as many details as you can for a faster, accurate plan.</p>
-              <ul className="mt-6 space-y-2 text-sm text-slate-700">
-                <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"/>WhatsApp: +91-90000-00000</li>
-                <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"/>Email: hello@keralatrails.example</li>
-              </ul>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const data = Object.fromEntries(new FormData(form));
-                import('./lib/api').then(({ api }) =>
-                  api('/api/contact', { method: 'POST', body: { name: data.name, email: data.email, message: data.message } })
-                ).then(() => {
-                  alert('Thanks! We will get back to you soon.');
-                  form.reset();
-                }).catch((err) => alert(err.message));
-              }}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700">Name</label>
-                  <input name="name" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Your name" />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="block text-sm font-medium text-slate-700">Email</label>
-                  <input name="email" type="email" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="you@example.com" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700">Message</label>
-                <textarea name="message" rows="4" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Share preferences or questions..." />
-              </div>
-              <button type="submit" className="mt-6 inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                Send enquiry
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-    </>
-  );
 
   return (
-    <Routes>
-      <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<Home />} />
-      </Route>
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-    </Routes>
+    <div className="min-h-screen bg-sand flex flex-col">
+      <Routes>
+        <Route element={<><Navbar /><main className="grow"><Outlet /></main><Footer /></>}>
+          <Route path="/" element={<Home packagesRef={packagesRef} contactRef={contactRef} aboutRef={aboutRef} />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+        </Route>
+
+        <Route element={<ProtectedLayout />}>
+          <Route path="/book" element={<BookPackage />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
+
+        <Route path="/admin-login" element={<AdminLogin />} />
+      </Routes>
+    </div>
   )
 }
 

@@ -2,8 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import authRouter from './routes/auth.js';
+import adminRouter from './routes/admin.js';
 import contactRouter from './routes/contact.js';
 import bookingsRouter from './routes/bookings.js';
+import packagesRouter from './routes/packages.js';
 import { getPool } from './mysql.js';
 
 const app = express();
@@ -25,8 +27,10 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/bookings', bookingsRouter);
+app.use('/api/packages', packagesRouter);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });

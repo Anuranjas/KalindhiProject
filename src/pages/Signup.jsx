@@ -7,8 +7,12 @@ export default function Signup() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState('signup'); // 'signup' or 'verify'
+  const [otp, setOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -17,45 +21,138 @@ export default function Signup() {
     try {
       setLoading(true);
       await api('/api/auth/signup', { method: 'POST', body: { name: form.name, email: form.email, password: form.password } });
-      navigate('/login');
+      setStep('verify');
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-  return (
-    <main className="min-h-[calc(100vh-4rem)] bg-slate-50 py-12 sm:py-16">
-      <div className="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Create account</h1>
-          <p className="mt-2 text-sm text-slate-600">Plan and manage your Kerala trips.</p>
 
-          <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Full name</label>
-              <input name="name" value={form.name} onChange={onChange} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Your name" />
+  const onVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      setLoading(true);
+      const { token, user } = await api('/api/auth/verify-otp', { method: 'POST', body: { email: form.email, code: otp } });
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      window.dispatchEvent(new Event('storage'));
+      navigate('/');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onResend = async () => {
+    setError('');
+    try {
+      await api('/api/auth/resend-otp', { method: 'POST', body: { email: form.email } });
+      alert('A new OTP has been sent to your email.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  if (step === 'verify') {
+    return (
+      <main className="min-h-[calc(100vh-5rem)] flex items-center justify-center bg-sand px-6 py-20">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-12">
+            <h1 className="serif text-4xl font-semibold text-primary">Verify Identity.</h1>
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">Enter the 6-digit code sent to your email</p>
+          </div>
+
+          <form className="space-y-10" onSubmit={onVerify}>
+            <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+              <label htmlFor="otp" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">OTP Code</label>
+              <input 
+                id="otp"
+                value={otp} 
+                onChange={(e) => setOtp(e.target.value)} 
+                required 
+                maxLength={6}
+                className="block w-full bg-transparent pt-2 pb-1 text-3xl tracking-[0.5em] serif text-center outline-none placeholder:text-primary/10" 
+                placeholder="000000" 
+              />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Email</label>
-              <input name="email" type="email" value={form.email} onChange={onChange} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="you@example.com" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Password</label>
-              <input name="password" type="password" value={form.password} onChange={onChange} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Create a password" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Confirm password</label>
-              <input name="confirm" type="password" value={form.confirm} onChange={onChange} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Repeat your password" />
-            </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <button disabled={loading} type="submit" className="mt-2 w-full rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60">{loading ? 'Creating...' : 'Create account'}</button>
+            
+            {error && <p className="text-[11px] font-bold uppercase tracking-wider text-red-500/80 text-center">{error}</p>}
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-primary text-white py-5 rounded-full text-[11px] font-bold uppercase tracking-[0.3em] transition-all hover:bg-accent disabled:opacity-50"
+            >
+              {loading ? 'Verifying...' : 'Complete Registration'}
+            </button>
           </form>
 
-          <p className="mt-4 text-sm text-slate-600">Already have an account? <Link to="/login" className="text-emerald-700 hover:underline">Log in</Link></p>
-          <div className="mt-6 text-center text-xs text-slate-500">
-            <Link to="/" className="hover:underline">Back to home</Link>
+          <p className="mt-12 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">
+            Didn't receive code? {' '}
+            <button onClick={onResend} className="text-primary hover:text-accent border-b border-primary/20 pb-0.5 ml-1">Resend Code</button>
+          </p>
+        </div>
+      </main>
+    );
+  }
+  return (
+    <main className="min-h-[calc(100vh-5rem)] flex items-center justify-center bg-sand px-6 py-20">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-12">
+          <h1 className="serif text-4xl font-semibold text-primary">Join the Collective.</h1>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">Register for exclusive access to curated trails</p>
+        </div>
+
+        <form className="space-y-10" onSubmit={onSubmit}>
+          <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+            <label htmlFor="name" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Legal Name</label>
+            <input id="name" name="name" value={form.name} onChange={onChange} required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="Elias Thorne" />
           </div>
+          <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+            <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Email Address</label>
+            <input id="email" name="email" type="email" value={form.email} onChange={onChange} required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="elias@example.com" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+              <div className="flex justify-between items-center">
+                <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Security Code</label>
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[9px] font-bold uppercase tracking-widest text-primary/40 hover:text-accent transition-colors"
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <input id="password" name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={onChange} required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="••••••••" />
+            </div>
+            <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+              <label htmlFor="confirm" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Verification</label>
+              <input id="confirm" name="confirm" type={showPassword ? 'text' : 'password'} value={form.confirm} onChange={onChange} required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="••••••••" />
+            </div>
+          </div>
+          
+          {error && <p className="text-[11px] font-bold uppercase tracking-wider text-red-500/80 text-center">{error}</p>}
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-primary text-white py-5 rounded-full text-[11px] font-bold uppercase tracking-[0.3em] transition-all hover:bg-accent disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : 'Create Access'}
+          </button>
+        </form>
+
+        <p className="mt-12 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">
+          Already registered? {' '}
+          <Link to="/login" className="text-primary hover:text-accent border-b border-primary/20 pb-0.5 ml-1">Authenticate</Link>
+        </p>
+
+        <div className="mt-12 text-center">
+            <Link to="/" className="text-[9px] font-bold uppercase tracking-[0.4em] text-primary/20 hover:text-primary transition-colors">Back to Sanctuary</Link>
         </div>
       </div>
     </main>

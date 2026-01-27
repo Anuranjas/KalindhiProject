@@ -2,56 +2,86 @@ import { Link } from 'react-router-dom';
 
 export default function About() {
   return (
-    <section className="py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">About Kalindi</h2>
-            <p className="mt-4 text-slate-700">
-              We’re a locally-rooted travel company crafting authentic Kerala experiences — from tranquil
-              backwater cruises to mist-laden tea hills and sun-kissed beaches. Our small, passionate team works
-              with licensed guides, reliable transport, and handpicked stays to ensure comfort, safety, and real
-              connection to Kerala’s culture and nature.
-            </p>
-            <ul className="mt-6 space-y-3 text-slate-700 text-sm">
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"/>Tailor-made itineraries for couples, families, and groups</li>
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"/>Verified partners and comfortable category stays</li>
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"/>Transparent pricing with dedicated trip coordinator</li>
-              <li className="flex gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"/>Responsible travel: supporting local communities & eco efforts</li>
-            </ul>
+    <section className="py-24 md:py-40 bg-sand overflow-hidden">
+      <div className="mx-auto max-w-7xl px-6 lg:px-12">
+        <div className="flex flex-col lg:flex-row items-start gap-16 lg:gap-24">
+          
+          {/* Text Content */}
+          <div className="w-full lg:w-1/2">
+            <div className="inline-block mb-6 px-4 py-1.5 rounded-full border border-primary/10 bg-primary/5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Our Legacy</span>
+            </div>
+            
+            <h2 className="text-4xl md:heading-md serif text-primary mb-10 drop-shadow-sm">
+              Crafting <span className="italic">Timeless</span> Stories in God's Own Country.
+            </h2>
+            
+            <div className="space-y-6 text-primary/80 leading-relaxed font-light">
+              <p className="text-base md:text-lg italic serif">
+                "We don't just plan trips; we curate moments that transcend the ordinary."
+              </p>
+              <p>
+                Rooted in the lush soul of Kerala, Kalindi is a boutique travel collective dedicated to the art of slow travel. We believe in the quiet ripple of a houseboat on the backwaters, the scent of fresh cardamom in the mist-laden hills, and the rhythmic chant of the ocean.
+              </p>
+              <p>
+                Our philosophy is simple: authentic connection. We skip the crowded tourist paths to lead you into the heart of local life—where every spice garden has a story and every sunset feels like a personal gift.
+              </p>
+            </div>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/?to=packages" className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">Explore Packages</Link>
-              <Link to="/?to=contact" className="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-slate-700 font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">Talk to an Expert</Link>
+            <div className="mt-12 grid grid-cols-2 gap-x-8 gap-y-6">
+              {[
+                { label: 'Curated Trails', desc: 'Bespoke itineraries for the wandering soul.' },
+                { label: 'Local Soul', desc: 'Deeply rooted connections with native guides.' },
+                { label: 'Conscious Luxury', desc: 'Handpicked stays that honor the earth.' },
+                { label: 'Pure Serenity', desc: 'Seamless logistics for total peace of mind.' }
+              ].map((item, idx) => (
+                <div key={idx} className="group">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 group-hover:text-accent transition-colors">{item.label}</h4>
+                  <p className="text-[13px] text-primary/60 leading-tight">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-16">
+              <Link to="/?to=packages" className="group flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full border border-primary/20 flex items-center justify-center group-hover:bg-primary transition-all duration-500">
+                  <span className="text-primary group-hover:text-white transition-colors">→</span>
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-primary group-hover:translate-x-2 transition-transform duration-500">Explore the Collection</span>
+              </Link>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="col-span-2 overflow-hidden rounded-md border border-slate-200">
-              <img
-                src="https://wallpapercave.com/wp/wp8050512.jpg"
-                alt="Houseboat on Kerala backwaters"
-                className="h-56 w-full object-cover sm:h-72 md:h-80"
-                loading="lazy"
-              />
+          {/* Visual Content - Editorial Grid */}
+          <div className="w-full lg:w-1/2 relative">
+            <div className="grid grid-cols-12 grid-rows-12 h-[500px] md:h-[700px] gap-4">
+              <div className="col-span-8 row-span-8 overflow-hidden rounded-sm shadow-2xl">
+                <img
+                  src="https://wallpapercave.com/wp/wp8050512.jpg"
+                  alt="Backwaters"
+                  className="h-full w-full object-cover transition-transform duration-1000 hover:scale-110"
+                />
+              </div>
+              <div className="col-span-4 row-span-5 col-start-9 row-start-3 overflow-hidden rounded-sm shadow-xl">
+                <img
+                  src="https://www.keralatourism.org/images/microsites/munnar/munnar.jpg"
+                  alt="Munnar"
+                  className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                />
+              </div>
+              <div className="col-span-5 row-span-4 col-start-2 row-start-9 overflow-hidden rounded-sm shadow-xl mt-4">
+                <img
+                  src="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=2000&auto=format&fit=crop"
+                  alt="Culture"
+                  className="h-full w-full object-cover"
+                />
+              </div>
             </div>
-            <div className="overflow-hidden rounded-md border border-slate-200">
-              <img
-                src="https://www.keralatourism.org/images/microsites/munnar/munnar.jpg"
-                alt="Munnar tea plantations"
-                className="h-32 w-full object-cover sm:h-40 md:h-44"
-                loading="lazy"
-              />
-            </div>
-            <div className="overflow-hidden rounded-md border border-slate-200">
-              <img
-                src="https://lh6.googleusercontent.com/proxy/P7CVYuvqs7WAIrnOLHaxI8isNfRLPq0LQJxF3-11Jx6DZO8wAThJzjV6N6BbbpIpCMWN__5hrVQxRlLnNhOKuusGxq7riBpLbmt80Qu4AMDqI_zorK7Wvnk"
-                alt="Kovalam beach at sunset"
-                className="h-32 w-full object-cover sm:h-40 md:h-44"
-                loading="lazy"
-              />
-            </div>
+            
+            {/* Absolute Decorative Element */}
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-accent/10 rounded-full blur-3xl -z-10" />
           </div>
+
         </div>
       </div>
     </section>

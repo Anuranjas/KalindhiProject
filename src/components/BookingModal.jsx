@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
-import { packages as allPackages } from '../data/packages';
 
-export default function BookingModal({ open, onClose, selectedDistrict, initialPackageId = '' }) {
+export default function BookingModal({ open, onClose, selectedDistrict, initialPackageId = '', availablePackages = [] }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,8 +17,8 @@ export default function BookingModal({ open, onClose, selectedDistrict, initialP
 
   const districtPackages = useMemo(() => {
     if (!selectedDistrict) return [];
-    return allPackages.filter(p => (p.districts || []).includes(selectedDistrict));
-  }, [selectedDistrict]);
+    return availablePackages.filter(p => (p.districts || []).includes(selectedDistrict));
+  }, [selectedDistrict, availablePackages]);
 
   const [form, setForm] = useState({
     applicant_name: '',
@@ -102,59 +101,71 @@ export default function BookingModal({ open, onClose, selectedDistrict, initialP
           <h2 className="text-xl font-bold tracking-tight">Book Packages</h2>
           <p className="mt-1 text-sm text-slate-600">Selected district: <span className="font-medium">{selectedDistrict || '—'}</span></p>
 
-          <form className="mt-5 space-y-4" onSubmit={onSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Full Name</label>
-                <input name="applicant_name" value={form.applicant_name} onChange={onChange} required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Your full name" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Email</label>
-                <input name="email" value={form.email} onChange={onChange} type="email" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="you@example.com" />
-              </div>
+          {!user ? (
+            <div className="mt-8 flex flex-col items-center justify-center py-10 text-center">
+              <p className="mb-6 text-slate-600">You must be logged in to book and pay for packages.</p>
+              <a 
+                href="/login" 
+                className="inline-flex items-center rounded-md bg-emerald-600 px-6 py-3 text-white font-medium hover:bg-emerald-700 transition-colors"
+              >
+                Sign In to Continue
+              </a>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">People</label>
-                <input name="people_count" value={form.people_count} onChange={onChange} type="number" min={1} max={20} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" />
+          ) : (
+            <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Full Name</label>
+                  <input name="applicant_name" value={form.applicant_name} onChange={onChange} required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Your full name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Email</label>
+                  <input name="email" value={form.email} onChange={onChange} type="email" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="you@example.com" />
+                </div>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">People</label>
+                  <input name="people_count" value={form.people_count} onChange={onChange} type="number" min={1} max={20} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Transport</label>
+                  <select name="transport_mode" value={form.transport_mode} onChange={onChange} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <option>Car</option>
+                    <option>Bus</option>
+                    <option>Train</option>
+                    <option>Flight</option>
+                    <option>Boat</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Travel Date</label>
+                  <input name="package_date" value={form.package_date} onChange={onChange} type="date" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-slate-700">Transport</label>
-                <select name="transport_mode" value={form.transport_mode} onChange={onChange} className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                  <option>Car</option>
-                  <option>Bus</option>
-                  <option>Train</option>
-                  <option>Flight</option>
-                  <option>Boat</option>
+                <label className="block text-sm font-medium text-slate-700">Package</label>
+                <select name="package_id" value={form.package_id} onChange={onChange} required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                  {districtPackages.length === 0 && <option value="">No packages for this district</option>}
+                  {districtPackages.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Travel Date</label>
-                <input name="package_date" value={form.package_date} onChange={onChange} type="date" required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" />
+
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              {success && <p className="text-sm text-emerald-700">{success}</p>}
+
+              <div className="flex items-center gap-3">
+                <button type="submit" disabled={loading} className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60">
+                  {loading ? 'Processing...' : 'Book & Pay Now'}
+                </button>
+                <button type="button" onClick={handleClose} className="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-slate-700 font-medium hover:bg-slate-50">Cancel</button>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Package</label>
-              <select name="package_id" value={form.package_id} onChange={onChange} required className="mt-1 w-full rounded-md border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                {districtPackages.length === 0 && <option value="">No packages for this district</option>}
-                {districtPackages.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-emerald-700">{success}</p>}
-
-            <div className="flex items-center gap-3">
-              <button type="submit" disabled={loading} className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60">
-                {loading ? 'Submitting...' : 'Submit Booking'}
-              </button>
-              <button type="button" onClick={handleClose} className="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-slate-700 font-medium hover:bg-slate-50">Close</button>
-            </div>
-          </form>
+            </form>
+          )}
         </div>
       </div>
     </div>
