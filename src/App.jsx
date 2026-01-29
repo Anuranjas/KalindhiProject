@@ -56,7 +56,7 @@ const Home = ({ packagesRef, contactRef, aboutRef }) => (
               </div>
               <div>
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 mb-4">Electronic Mail</h4>
-                <p className="text-xl serif italic text-primary">concierge@kalindi.trail</p>
+                <p className="text-xl serif italic text-primary">kalinditouristpackages@gmail.com</p>
               </div>
               <div className="max-w-sm">
                 <p className="text-sm text-primary/60 font-light leading-relaxed">

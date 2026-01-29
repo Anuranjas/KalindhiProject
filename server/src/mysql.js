@@ -18,7 +18,11 @@ export async function getPool() {
       user: DB_USER,
       password: DB_PASSWORD,
       database: DB_NAME,
-      connectionLimit: 10
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000
     });
   }
   return pool;

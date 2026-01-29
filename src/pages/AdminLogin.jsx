@@ -1,5 +1,115 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, API_BASE } from '../lib/api';
+
+const downloadCSV = (data, filename) => {
+    if (!data || !data.length) return;
+    
+    const processedData = data.map(item => {
+        const newItem = { ...item };
+        Object.keys(newItem).forEach(key => {
+            if (Array.isArray(newItem[key])) {
+                newItem[key] = newItem[key].join('; ');
+            } else if (typeof newItem[key] === 'object' && newItem[key] !== null) {
+                newItem[key] = JSON.stringify(newItem[key]);
+            }
+        });
+        return newItem;
+    });
+
+    const headers = Object.keys(processedData[0]);
+    const csvContent = [
+        headers.join(','),
+        ...processedData.map(row => headers.map(header => {
+            const val = row[header];
+            if (val === null || val === undefined) return '';
+            const str = String(val).replace(/"/g, '""');
+            return str.includes(',') || str.includes('\n') || str.includes('"') ? `"${str}"` : str;
+        }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+const AdminTeamView = ({ admins, onRefresh, isLoading, currentAdmin }) => {
+    const isMainAdmin = currentAdmin?.email === 'kalinditouristpackages@gmail.com';
+
+    const approveAdmin = async (id) => {
+        try {
+            const token = localStorage.getItem('admin_token');
+            await api(`/api/admin/team/${id}/approve`, { method: 'POST', token });
+            onRefresh();
+        } catch (err) { alert(err.message); }
+    };
+
+    const deleteAdmin = async (id) => {
+        if (!confirm('Remove this administrator access?')) return;
+        try {
+            const token = localStorage.getItem('admin_token');
+            await api(`/api/admin/team/${id}`, { method: 'DELETE', token });
+            onRefresh();
+        } catch (err) { alert(err.message); }
+    };
+
+    return (
+        <div className="space-y-6">
+            <header>
+                <h1 className="text-2xl font-bold text-slate-900">Administrative Team</h1>
+                <p className="text-sm text-slate-500 mt-1">Manage institutional access and approve new requests</p>
+            </header>
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <th className="p-4">Staff Member</th>
+                            <th className="p-4">Status</th>
+                            <th className="p-4">Joined</th>
+                            <th className="p-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {admins.map(a => (
+                            <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="p-4">
+                                    <p className="text-sm font-bold text-slate-900">{a.name}</p>
+                                    <p className="text-xs text-slate-500">{a.email}</p>
+                                    {a.phone && <p className="text-[10px] text-slate-400 mt-0.5">{a.phone}</p>}
+                                </td>
+                                <td className="p-4">
+                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${a.is_approved ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                        {a.is_approved ? 'Approved' : 'Pending Approval'}
+                                    </span>
+                                </td>
+                                <td className="p-4 text-xs text-slate-500">
+                                    {new Date(a.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="p-4 text-right">
+                                    <div className="flex justify-end gap-2">
+                                        {!a.is_approved && (
+                                            <button onClick={() => approveAdmin(a.id)} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-700 transition-all">Approve</button>
+                                        )}
+                                        {isMainAdmin && a.email !== 'kalinditouristpackages@gmail.com' && (
+                                            <button onClick={() => deleteAdmin(a.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
 
 const Dashboard = ({ stats, recentBookings, enquiries, setView }) => {
     const unread = enquiries.filter(e => !e.is_read && !e.is_archived).slice(0, 3);
@@ -25,10 +135,14 @@ const Dashboard = ({ stats, recentBookings, enquiries, setView }) => {
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {cards.map((card) => (
-                    <div key={card.label} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{card.label}</p>
-                        <p className={`text-3xl font-bold ${card.color || 'text-slate-900'}`}>
+                {cards.map((card, index) => (
+                    <div 
+                        key={card.label} 
+                        className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 group-hover:text-slate-700 transition-colors">{card.label}</p>
+                        <p className={`text-3xl font-bold ${card.color || 'text-slate-900'} group-hover:scale-105 transition-transform origin-left`}>
                             {card.value}
                         </p>
                     </div>
@@ -145,9 +259,21 @@ const TravelerList = ({ users, onRefresh, isLoading }) => {
                     <h1 className="text-2xl font-bold text-slate-900">Traveler Records</h1>
                     <p className="text-sm text-slate-500 mt-1">Verified collective registry containing {users.length} travelers</p>
                 </div>
-                <button onClick={onRefresh} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
-                    <svg className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => downloadCSV(users, 'traveler_registry')}
+                        disabled={!users.length}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50"
+                    >
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4" />
+                        </svg>
+                        <span>Export CSV</span>
+                    </button>
+                    <button onClick={onRefresh} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+                        <svg className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                </div>
             </header>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -162,8 +288,12 @@ const TravelerList = ({ users, onRefresh, isLoading }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {users.map(u => (
-                                <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                            {users.map((u, index) => (
+                                <tr 
+                                    key={u.id} 
+                                    className="hover:bg-slate-50 transition-colors animate-in fade-in slide-in-from-left-2 duration-300 fill-mode-both"
+                                    style={{ animationDelay: `${index * 50}ms` }}
+                                >
                                     <td className="p-4">
                                         <div className="text-sm font-semibold text-slate-900">{u.name}</div>
                                         <div className="text-xs text-slate-500">{u.email}</div>
@@ -273,21 +403,33 @@ const EnquiriesView = ({ enquiries, onRefresh, isLoading }) => {
                     <h1 className="text-2xl font-bold text-slate-900">Enquiries</h1>
                     <p className="text-sm text-slate-500 mt-1">Manage traveler communications and requests</p>
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                    {[
-                        { id: 'inbox', label: 'Inbox', count: enquiries.filter(e => !e.is_archived).length },
-                        { id: 'unread', label: 'Unread', count: unreadCount },
-                        { id: 'archived', label: 'Trash' }
-                    ].map(t => (
-                        <button 
-                            key={t.id}
-                            onClick={() => setFilter(t.id)}
-                            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${filter === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-                        >
-                            {t.label} 
-                            {t.count !== undefined && t.count > 0 && <span className="ml-2 opacity-50">({t.count})</span>}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => downloadCSV(enquiries, 'traveler_enquiries')}
+                        disabled={!enquiries.length}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50"
+                    >
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4" />
+                        </svg>
+                        <span>Export CSV</span>
+                    </button>
+                    <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                        {[
+                            { id: 'inbox', label: 'Inbox', count: enquiries.filter(e => !e.is_archived).length },
+                            { id: 'unread', label: 'Unread', count: unreadCount },
+                            { id: 'archived', label: 'Trash' }
+                        ].map(t => (
+                            <button 
+                                key={t.id}
+                                onClick={() => setFilter(t.id)}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${filter === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                            >
+                                {t.label} 
+                                {t.count !== undefined && t.count > 0 && <span className="ml-2 opacity-50">({t.count})</span>}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 
@@ -371,12 +513,56 @@ const EnquiriesView = ({ enquiries, onRefresh, isLoading }) => {
     );
 };
 
+const KERALA_DISTRICTS = [
+    'Alappuzha', 'Ernakulam', 'Idukki', 'Kannur', 'Kasaragod', 'Kollam', 'Kottayam', 
+    'Kozhikode', 'Malappuram', 'Palakkad', 'Pathanamthitta', 'Thiruvananthapuram', 'Thrissur', 'Wayanad'
+];
+
 const PackageEditor = ({ packages, onRefresh, isLoading }) => {
     const [showAdd, setShowAdd] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [uploading, setUploading] = useState(false);
     const [newPkg, setNewPkg] = useState({
-        id: '', name: '', price: '', duration: '', image: '', districts: '', features: ''
+        id: '', name: '', price: '', duration: '', image: '', districts: [], features: '', description: '', highlight: false
     });
+
+    const handleDistrictToggle = (d) => {
+        setNewPkg(prev => ({
+            ...prev,
+            districts: prev.districts.includes(d) 
+                ? prev.districts.filter(item => item !== d)
+                : [...prev.districts, d]
+        }));
+    };
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const token = localStorage.getItem('admin_token');
+            const res = await fetch(`${API_BASE}/api/admin/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Upload failed');
+            
+            setNewPkg({ ...newPkg, image: data.imageUrl });
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -384,11 +570,11 @@ const PackageEditor = ({ packages, onRefresh, isLoading }) => {
             const token = localStorage.getItem('admin_token');
             if (!token) throw new Error('Authentication required. Please log in again.');
             
-            const districts = typeof newPkg.districts === 'string' ? newPkg.districts.split(',').map(s => s.trim()).filter(Boolean) : newPkg.districts;
+            const districts = Array.isArray(newPkg.districts) ? newPkg.districts : newPkg.districts.split(',').map(s => s.trim()).filter(Boolean);
             const features = typeof newPkg.features === 'string' ? newPkg.features.split(',').map(s => s.trim()).filter(Boolean) : newPkg.features;
             
             if (editingId) {
-                await api(`/api/admin/packages/${editingId}`, { 
+                await api(`/api/admin/packages/${encodeURIComponent(editingId)}`, { 
                     method: 'PUT', 
                     token,
                     body: { ...newPkg, districts, features, price: Number(newPkg.price) } 
@@ -403,7 +589,7 @@ const PackageEditor = ({ packages, onRefresh, isLoading }) => {
             
             setShowAdd(false);
             setEditingId(null);
-            setNewPkg({ id: '', name: '', price: '', duration: '', image: '', districts: '', features: '' });
+            setNewPkg({ id: '', name: '', price: '', duration: '', image: '', districts: [], features: '', description: '', highlight: false });
             onRefresh();
         } catch (err) {
             alert(err.message || 'Failed to save package.');
@@ -418,8 +604,10 @@ const PackageEditor = ({ packages, onRefresh, isLoading }) => {
             price: pkg.price,
             duration: pkg.duration,
             image: pkg.image,
-            districts: Array.isArray(pkg.districts) ? pkg.districts.join(', ') : pkg.districts || '',
-            features: Array.isArray(pkg.features) ? pkg.features.join(', ') : pkg.features || ''
+            districts: Array.isArray(pkg.districts) ? pkg.districts : (pkg.districts || '').split(',').map(s => s.trim()).filter(Boolean),
+            features: Array.isArray(pkg.features) ? pkg.features.join(', ') : pkg.features || '',
+            description: pkg.description || '',
+            highlight: !!pkg.highlight
         });
         setEditingId(pkg.id);
         setShowAdd(true);
@@ -450,27 +638,39 @@ const PackageEditor = ({ packages, onRefresh, isLoading }) => {
                     <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
                     <p className="text-sm text-slate-500 mt-1">Manage and curate travel experience packages</p>
                 </div>
-                <button 
-                    onClick={() => {
-                        if (showAdd) {
-                            setShowAdd(false);
-                            setEditingId(null);
-                            setNewPkg({ id: '', name: '', price: '', duration: '', image: '', districts: '', features: '' });
-                        } else {
-                            setShowAdd(true);
-                        }
-                    }}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm ${showAdd ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        {showAdd ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        )}
-                    </svg>
-                    {showAdd ? 'Cancel' : 'New Package'}
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => downloadCSV(packages, 'package_inventory')}
+                        disabled={!packages.length}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50 shadow-sm"
+                    >
+                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4" />
+                        </svg>
+                        <span>Export CSV</span>
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if (showAdd) {
+                                setShowAdd(false);
+                                setEditingId(null);
+                                setNewPkg({ id: '', name: '', price: '', duration: '', image: '', districts: [], features: '', highlight: false });
+                            } else {
+                                setShowAdd(true);
+                            }
+                        }}
+                        className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm ${showAdd ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            {showAdd ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            )}
+                        </svg>
+                        {showAdd ? 'Cancel' : 'New Package'}
+                    </button>
+                </div>
             </header>
 
             {showAdd && (
@@ -495,18 +695,99 @@ const PackageEditor = ({ packages, onRefresh, isLoading }) => {
                                 <input value={newPkg.duration} onChange={e => setNewPkg({...newPkg, duration: e.target.value})} required className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" placeholder="3 Days, 2 Nights" />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Image URL</label>
-                                <input value={newPkg.image} onChange={e => setNewPkg({...newPkg, image: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" placeholder="https://images.unsplash.com/..." />
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Package Image</label>
+                                <div className="flex flex-col gap-2">
+                                    <div className={`relative group border-2 border-dashed rounded-xl transition-all duration-300 ${newPkg.image ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-slate-50 hover:border-emerald-400'}`}>
+                                        <input 
+                                            type="file" 
+                                            onChange={handleFileUpload} 
+                                            accept="image/*"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        />
+                                        <div className="p-4 flex items-center gap-4">
+                                            {newPkg.image ? (
+                                                <img 
+                                                    src={newPkg.image.startsWith('http') ? newPkg.image : `${API_BASE}${newPkg.image}`} 
+                                                    alt="Preview" 
+                                                    className="w-12 h-12 rounded-lg object-cover ring-2 ring-white shadow-sm"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center">
+                                                    <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-700">{newPkg.image ? 'Change Image' : 'Select Hero Image'}</p>
+                                                <p className="text-[10px] text-slate-500">{uploading ? 'Processing file...' : 'PNG, JPG or WebP up to 5MB'}</p>
+                                            </div>
+                                        </div>
+                                        {uploading && (
+                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center rounded-xl z-20">
+                                                <div className="h-5 w-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {newPkg.image && (
+                                        <div className="flex items-center justify-between px-1">
+                                            <span className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">{newPkg.image}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setNewPkg({ ...newPkg, image: '' })}
+                                                className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Districts (comma separated)</label>
-                                <input value={newPkg.districts} onChange={e => setNewPkg({...newPkg, districts: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" placeholder="Alappuzha, Kottayam" />
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Target Districts</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 p-4 rounded-xl border border-slate-100 max-h-48 overflow-y-auto">
+                                    {KERALA_DISTRICTS.map(d => (
+                                        <label key={d} className="flex items-center gap-2 cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={newPkg.districts.includes(d)}
+                                                onChange={() => handleDistrictToggle(d)}
+                                                className="w-4 h-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                                            />
+                                            <span className={`text-xs transition-colors ${newPkg.districts.includes(d) ? 'text-emerald-700 font-bold' : 'text-slate-500 group-hover:text-slate-900 font-medium'}`}>{d}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-medium italic">Select districts covered by this package</p>
                             </div>
                         </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-end">
+                            <div className="space-y-1.5 grow">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Features (comma separated)</label>
+                                <input value={newPkg.features} onChange={e => setNewPkg({...newPkg, features: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" placeholder="Private Boat, Traditional Dining, Local Guide" />
+                            </div>
+                            <div className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg h-[46px]">
+                                <input 
+                                    type="checkbox" 
+                                    id="pkg-highlight"
+                                    checked={newPkg.highlight} 
+                                    onChange={e => setNewPkg({...newPkg, highlight: e.target.checked})}
+                                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
+                                />
+                                <label htmlFor="pkg-highlight" className="text-sm font-semibold text-slate-700 cursor-pointer select-none">Feature this package on homepage</label>
+                            </div>
+                        </div>
+                        
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Features (comma separated)</label>
-                            <input value={newPkg.features} onChange={e => setNewPkg({...newPkg, features: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" placeholder="Private Boat, Traditional Dining, Local Guide" />
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Package Description</label>
+                            <textarea 
+                                value={newPkg.description} 
+                                onChange={e => setNewPkg({...newPkg, description: e.target.value})} 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all min-h-[100px] resize-none" 
+                                placeholder="Describe the journey experience, highlights, and what makes it unique..."
+                            />
                         </div>
+
                         <div className="flex justify-end pt-4 border-t border-slate-100">
                             <button type="submit" className="bg-slate-900 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-black transition-all">
                                 {editingId ? 'Update Package' : 'Publish Package'}
@@ -522,18 +803,37 @@ const PackageEditor = ({ packages, onRefresh, isLoading }) => {
                         <div className="h-8 w-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
                         <p className="text-sm font-bold uppercase tracking-widest">Retrieving Package Inventory</p>
                     </div>
-                ) : packages.map(pkg => (
-                    <div key={pkg.id} className="bg-white p-5 border border-slate-200 rounded-xl flex flex-col sm:flex-row gap-5 hover:shadow-md transition-shadow">
-                        <div className="w-full sm:w-28 h-28 rounded-lg overflow-hidden shrink-0 bg-slate-100">
-                            <img src={pkg.image} alt="" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
+                ) : packages.map((pkg, index) => (
+                    <div 
+                        key={pkg.id} 
+                        className="bg-white p-5 border border-slate-200 rounded-xl flex flex-col sm:flex-row gap-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 animate-in fade-in zoom-in-95 fill-mode-both"
+                        style={{ animationDelay: `${index * 75}ms` }}
+                    >
+                        <div className="w-full sm:w-28 h-28 rounded-lg overflow-hidden shrink-0 bg-slate-100 group">
+                            <img 
+                                src={pkg.image?.startsWith('http') ? pkg.image : `${API_BASE}${pkg.image}`} 
+                                alt="" 
+                                className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700" 
+                            />
                         </div>
                         <div className="grow flex flex-col justify-between">
                             <div>
                                 <h3 className="font-bold text-slate-900 text-lg">{pkg.name}</h3>
-                                <div className="flex gap-3 items-center mt-1">
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 items-center mt-1">
                                     <span className="text-sm font-bold text-emerald-600">INR {pkg.price.toLocaleString()}</span>
                                     <span className="h-1 w-1 rounded-full bg-slate-200" />
                                     <span className="text-xs font-semibold text-slate-500">{pkg.duration}</span>
+                                    {pkg.districts?.length > 0 && (
+                                        <>
+                                            <span className="h-1 w-1 rounded-full bg-slate-200" />
+                                            <div className="flex gap-1">
+                                                {pkg.districts.slice(0, 2).map(d => (
+                                                    <span key={d} className="text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{d}</span>
+                                                ))}
+                                                {pkg.districts.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{pkg.districts.length - 2} more</span>}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex gap-2 mt-4 pt-4 border-t border-slate-50">
@@ -594,15 +894,27 @@ const BookingsView = ({ bookings, onRefresh, isLoading }) => {
                     <h2 className="text-lg font-bold text-slate-900">All Bookings</h2>
                     <p className="text-sm text-slate-500 mt-0.5">Track and manage traveler reservations</p>
                 </div>
-                <button 
-                    onClick={onRefresh} 
-                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                    title="Refresh List"
-                >
-                    <svg className={`w-[18px] h-[18px] ${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => downloadCSV(bookings, 'system_bookings')}
+                        disabled={!bookings.length}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50"
+                    >
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4" />
+                        </svg>
+                        <span>Export CSV</span>
+                    </button>
+                    <button 
+                        onClick={onRefresh} 
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                        title="Refresh List"
+                    >
+                        <svg className={`w-[18px] h-[18px] ${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -624,8 +936,12 @@ const BookingsView = ({ bookings, onRefresh, isLoading }) => {
                                     <p className="text-[10px] font-bold uppercase tracking-widest">Retrieving System Bookings</p>
                                 </td>
                             </tr>
-                        ) : bookings.map(b => (
-                            <tr key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                        ) : bookings.map((b, index) => (
+                            <tr 
+                                key={b.id} 
+                                className="hover:bg-slate-50/50 transition-colors animate-in fade-in slide-in-from-left-2 duration-300 fill-mode-both"
+                                style={{ animationDelay: `${index * 50}ms` }}
+                            >
                                 <td className="px-6 py-4">
                                     <span className="font-mono text-xs text-slate-400">#{b.id.toString().padStart(5, '0')}</span>
                                 </td>
@@ -667,11 +983,12 @@ const BookingsView = ({ bookings, onRefresh, isLoading }) => {
 };
 
 export default function AdminPage() {
-    const [step, setStep] = useState('login'); // login, verify, dash
+    const [step, setStep] = useState('login'); // login, verify, dash, register
     const [view, setView] = useState('overview');
-    const [form, setForm] = useState({ email: '', password: '' });
+    const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -682,6 +999,8 @@ export default function AdminPage() {
     const [packages, setPackages] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [users, setUsers] = useState([]);
+    const [teamAdmins, setTeamAdmins] = useState([]);
+    const [currentAdmin, setCurrentAdmin] = useState(null);
     const [dataLoading, setDataLoading] = useState(false);
 
     const refreshData = useCallback(async () => {
@@ -689,12 +1008,13 @@ export default function AdminPage() {
         if (!token) return;
         setDataLoading(true);
         try {
-            const [enqData, statsData, packagesData, bookingsData, usersData] = await Promise.all([
+            const [enqData, statsData, packagesData, bookingsData, usersData, teamData] = await Promise.all([
                 api('/api/admin/enquiries', { token }),
                 api('/api/admin/stats', { token }),
                 api('/api/packages'),
                 api('/api/admin/bookings', { token }),
-                api('/api/admin/users', { token })
+                api('/api/admin/users', { token }),
+                api('/api/admin/team', { token })
             ]);
             setEnquiries(enqData);
             setStats(statsData.stats);
@@ -702,6 +1022,7 @@ export default function AdminPage() {
             setPackages(packagesData);
             setBookings(bookingsData);
             setUsers(usersData);
+            setTeamAdmins(teamData);
         } catch (e) {
             console.error('Data Refresh Error:', e);
             if (e.message?.includes('Unauthorized') || e.status === 401) {
@@ -715,7 +1036,9 @@ export default function AdminPage() {
 
     useEffect(() => {
         const token = localStorage.getItem('admin_token');
+        const adminUser = localStorage.getItem('admin_user');
         if (token) {
+            if (adminUser) setCurrentAdmin(JSON.parse(adminUser));
             setStep('dash');
             refreshData();
             const interval = setInterval(refreshData, 60000); // refresh every minute
@@ -724,13 +1047,31 @@ export default function AdminPage() {
     }, [refreshData]);
 
     const unreadCount = enquiries.filter(e => !e.is_read && !e.is_archived).length;
+    const pendingAdminsCount = teamAdmins.filter(a => !a.is_approved).length;
+
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+        setLoading(true);
+        try {
+            const res = await api('/api/admin/request-access', { method: 'POST', body: form });
+            setSuccess(res.message);
+            setTimeout(() => setStep('login'), 3000);
+        } catch (e) {
+            setError(e.message || 'Request failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setLoading(true);
         try {
-            await api('/api/admin/login', { method: 'POST', body: form });
+            await api('/api/admin/login', { method: 'POST', body: { email: form.email, password: form.password } });
             setStep('verify');
         } catch (e) { 
             setError(e.message || 'Login failed. Please verify your credentials.');
@@ -747,6 +1088,8 @@ export default function AdminPage() {
         try {
             const res = await api('/api/admin/verify', { method: 'POST', body: { email: form.email, code: otp } });
             localStorage.setItem('admin_token', res.token);
+            localStorage.setItem('admin_user', JSON.stringify(res.admin));
+            setCurrentAdmin(res.admin);
             setStep('dash');
             refreshData();
         } catch (e) { 
@@ -785,7 +1128,7 @@ export default function AdminPage() {
                             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Administrator Email</label>
                             <input 
                                 type="email" 
-                                placeholder="admin@kalindi.com" 
+                                placeholder="kalinditouristpackages@gmail.com" 
                                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
                                 onChange={e => setForm({...form, email: e.target.value})} 
                                 required
@@ -812,6 +1155,7 @@ export default function AdminPage() {
                         </div>
 
                         {error && <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-bold text-red-600 text-center">{error}</div>}
+                        {success && <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-bold text-emerald-600 text-center">{success}</div>}
 
                         <button 
                             disabled={loading} 
@@ -821,10 +1165,91 @@ export default function AdminPage() {
                         </button>
                     </form>
 
+                    <div className="mt-8 text-center">
+                        <p className="text-xs text-slate-500">Need administrative access? <button onClick={() => setStep('register')} className="text-emerald-600 font-bold hover:underline">Request Account</button></p>
+                    </div>
+
                     <footer className="mt-12 text-center text-slate-400">
                         <p className="text-[10px] font-bold uppercase tracking-widest">Copyright {new Date().getFullYear()} Kalindi Corporate Systems</p>
                     </footer>
                 </div>
+            </div>
+        </div>
+    );
+
+    if (step === 'register') return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+            <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-slate-100">
+                <header className="mb-10 text-center">
+                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Request Access</h2>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Submit details for administrator approval</p>
+                </header>
+
+                <form onSubmit={handleRegister} className="space-y-6">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Full Name</label>
+                        <input 
+                            type="text" 
+                            placeholder="John Doe" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, name: e.target.value})} 
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Institutional Email</label>
+                        <input 
+                            type="email" 
+                            placeholder="admin@kalinditrails.com" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, email: e.target.value})} 
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Phone Number</label>
+                        <input 
+                            type="tel" 
+                            placeholder="+91 98765 43210" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, phone: e.target.value})} 
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Create Password</label>
+                        <input 
+                            type="password" 
+                            placeholder="••••••••" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, password: e.target.value})} 
+                            required
+                        />
+                    </div>
+
+                    {error && <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-bold text-red-600 text-center">{error}</div>}
+                    {success && <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-bold text-emerald-600 text-center">{success}</div>}
+
+                    <div className="flex flex-col gap-4 pt-4">
+                        <button 
+                            disabled={loading} 
+                            className="w-full bg-slate-900 text-white py-4 rounded-lg text-sm font-bold uppercase tracking-widest shadow-lg hover:bg-black transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Processing...' : 'Submit Request'}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => setStep('login')} 
+                            className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center gap-1"
+                        >
+                            Already have an account? Login
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
@@ -921,6 +1346,7 @@ export default function AdminPage() {
                         { id: 'bookings', label: 'Bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
                         { id: 'packages', label: 'Packages', icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
                         { id: 'users', label: 'Travelers', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+                        { id: 'admins', label: 'Team', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', badge: pendingAdminsCount },
                         { id: 'enquiries', label: 'Enquiries', icon: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z', badge: unreadCount }
                     ].map(item => (
                         <button 
@@ -929,14 +1355,14 @@ export default function AdminPage() {
                                 setView(item.id);
                                 setIsSidebarOpen(false);
                             }}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all w-full text-left ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 w-full text-left group ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 translate-x-1' : 'hover:bg-slate-800 hover:text-white text-slate-400 hover:translate-x-1'}`}
                         >
-                            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 ${view === item.id ? 'scale-110' : 'group-hover:scale-110'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                             </svg>
                             <span className="flex-1">{item.label}</span>
                             {item.badge > 0 && (
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${view === item.id ? 'bg-white text-emerald-600' : 'bg-emerald-500 text-white'}`}>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-300 ${view === item.id ? 'bg-white text-emerald-600 scale-110' : 'bg-emerald-500 text-white group-hover:bg-emerald-400'}`}>
                                     {item.badge}
                                 </span>
                             )}
@@ -948,6 +1374,7 @@ export default function AdminPage() {
                     <button 
                         onClick={() => {
                             localStorage.removeItem('admin_token');
+                            localStorage.removeItem('admin_user');
                             setStep('login');
                         }} 
                         className="flex items-center gap-3 px-4 py-3 w-full text-left text-sm font-semibold text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
@@ -1007,6 +1434,14 @@ export default function AdminPage() {
                                     enquiries={enquiries} 
                                     onRefresh={refreshData} 
                                     isLoading={dataLoading}
+                                />
+                            )}
+                            {view === 'admins' && (
+                                <AdminTeamView 
+                                    admins={teamAdmins} 
+                                    onRefresh={refreshData} 
+                                    isLoading={dataLoading}
+                                    currentAdmin={currentAdmin}
                                 />
                             )}
                         </div>

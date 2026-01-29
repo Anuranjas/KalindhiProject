@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
       ...pkg,
       districts: pkg.districts_json,
       features: pkg.features_json,
+      description: pkg.description,
       highlight: !!pkg.highlight
     }));
     res.json(packages);

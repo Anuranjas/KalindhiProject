@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { allDistricts } from '../../data/packages';
 import PackageCard from "./PackageCard";
 import BookingModal from "../BookingModal";
 import { api } from '../../lib/api';
@@ -16,8 +15,18 @@ export default function PackagesSection() {
       .catch(console.error);
   }, []);
 
+  const availableDistricts = useMemo(() => {
+    const districts = new Set();
+    packages.forEach(p => {
+      if (Array.isArray(p.districts)) {
+        p.districts.forEach(d => districts.add(d));
+      }
+    });
+    return Array.from(districts).sort();
+  }, [packages]);
+
   const filtered = useMemo(() => {
-    if (!district) return [];
+    if (!district) return packages;
     return packages.filter(p => (p.districts || []).includes(district));
   }, [district, packages]);
 
@@ -41,8 +50,8 @@ export default function PackagesSection() {
                 onChange={(e) => setDistrict(e.target.value)}
                 className="appearance-none bg-primary text-white text-[11px] font-bold uppercase tracking-[0.2em] px-12 py-5 rounded-full cursor-pointer transition-all hover:bg-primary/90 min-w-60 text-center outline-none ring-offset-2 focus:ring-1 ring-accent/40"
               >
-                <option value="" disabled className="bg-white text-primary text-left">Explore Districts</option>
-                {allDistricts.map(d => (
+                <option value="" className="bg-white text-primary text-left">All Districts</option>
+                {availableDistricts.map(d => (
                   <option key={d} value={d} className="bg-white text-primary py-4">{d}</option>
                 ))}
               </select>
@@ -54,28 +63,26 @@ export default function PackagesSection() {
         </div>
 
         <div className="mt-20">
-          {!district ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 bg-primary/5">
+            {filtered.map((pkg) => (
+              <div key={pkg.id} className="bg-white p-[0.5px]">
+                <PackageCard
+                  {...pkg}
+                  onBook={({ id }) => { 
+                    setSelectedPackageId(id); 
+                    setShowBooking(true); 
+                    setDistrict(pkg.districts?.[0] || ''); // Set district for modal context
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          
+          {filtered.length === 0 && (
             <div className="h-[400px] flex flex-col items-center justify-center border border-dashed border-primary/10 rounded-sm">
               <span className="serif text-3xl italic text-primary/20">The trails are waiting.</span>
-              <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30">Please choose a district above to begin.</p>
+              <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30">No journeys currently available in this realm.</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 bg-primary/5">
-              {filtered.map((pkg) => (
-                <div key={pkg.id} className="bg-white p-[0.5px]">
-                  <PackageCard
-                    {...pkg}
-                    onBook={({ id }) => { 
-                      setSelectedPackageId(id); 
-                      setShowBooking(true); 
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-          {district && filtered.length === 0 && (
-            <p className="mt-20 text-center serif italic text-primary/40">No journeys currently available in this realm.</p>
           )}
         </div>
 

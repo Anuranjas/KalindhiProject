@@ -1,13 +1,24 @@
 import { formatINR } from "../../data/packages";
+import { API_BASE } from "../../lib/api";
 
-export default function PackageCard({ id, name, price, duration, features = [], highlight, onBook, cta }) {
+export default function PackageCard({ id, name, price, duration, features = [], highlight, image, onBook, cta }) {
+  const imageUrl = image?.startsWith('http') ? image : `${API_BASE}${image}`;
+  
   return (
     <div className={`group relative flex flex-col transition-all duration-500 bg-white border border-primary/5 hover:border-accent/30 p-8 ${highlight ? 'ring-1 ring-accent/20' : ''}`}>
       {highlight && (
-        <div className="absolute -top-3 left-8 rounded-full bg-accent px-4 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-xl">
+        <div className="absolute -top-3 left-8 rounded-full bg-accent px-4 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-xl z-20">
           Highlight
         </div>
       )}
+
+      <div className="relative mb-8 aspect-[16/10] overflow-hidden rounded-sm">
+        <img 
+          src={imageUrl} 
+          alt={name}
+          className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110"
+        />
+      </div>
 
       <div className="mb-8 flex justify-between items-start">
         <div>

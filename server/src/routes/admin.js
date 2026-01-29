@@ -3,8 +3,37 @@ import { getPool } from '../mysql.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendMail } from '../lib/mailer.js';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = Router();
+
+// Configure Multer for local storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../../uploads'));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) return cb(null, true);
+    cb(new Error('Only images (jpg, png, webp) are allowed'));
+  }
+});
 
 // Middleware to verify admin token
 const adminAuthenticate = async (req, res, next) => {
@@ -19,6 +48,7 @@ const adminAuthenticate = async (req, res, next) => {
       return res.status(403).json({ error: 'Admin access denied' });
     }
     req.adminId = decoded.sub;
+    req.adminEmail = decoded.email;
     next();
   } catch (error) {
     console.error('Admin Auth Error:', error.message);
@@ -49,6 +79,10 @@ router.post('/login', async (req, res) => {
     if (!admins.length) return res.status(401).json({ error: 'Unauthorized credentials (email)' });
 
     const admin = admins[0];
+    if (!admin.is_approved) {
+      return res.status(403).json({ error: 'Access Denied: Your admin account is pending approval by the administrator.' });
+    }
+
     const ok = await bcrypt.compare(password, admin.password_hash);
     if (!ok) return res.status(401).json({ error: 'Unauthorized credentials (password)' });
 
@@ -61,6 +95,42 @@ router.post('/login', async (req, res) => {
     await sendAdminOTP(email, code);
 
     res.json({ message: 'OTP sent', email });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/request-access', async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ error: 'All fields are required' });
+
+    const pool = await getPool();
+    const [existing] = await pool.query('SELECT id FROM admins WHERE email = ?', [email]);
+    if (existing.length) return res.status(400).json({ error: 'An account with this email already exists' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('INSERT INTO admins (name, email, phone, password_hash, is_approved) VALUES (?, ?, ?, ?, 0)', [name, email, phone, hash]);
+
+    // Notify the Super Admin
+    await sendMail({
+      to: process.env.ADMIN_EMAIL || 'kalinditouristpackages@gmail.com',
+      subject: 'New Admin Access Request',
+      html: `
+        <div style="font-family: sans-serif; padding: 30px; border: 1px solid #e0e0e0; border-radius: 12px;">
+          <h2 style="color: #0d9488;">New Admin Request</h2>
+          <p>A new user has requested administrative access to the Kalindi Dashboard.</p>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+          </div>
+          <p>To approve this user, please update their status in the database manually or use the admin management tools.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Request submitted successfully! Please wait for administrator approval.' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -81,6 +151,60 @@ router.post('/verify', async (req, res) => {
     await pool.query('DELETE FROM user_otps WHERE user_email = ?', [email]);
 
     res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Endpoint for image uploads
+router.post('/upload', adminAuthenticate, upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) throw new Error('No file uploaded');
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({ imageUrl });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Admin Management (Self-service/Team)
+router.get('/team', adminAuthenticate, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const [admins] = await pool.query('SELECT id, name, email, phone, is_approved, created_at FROM admins ORDER BY created_at DESC');
+    res.json(admins);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/team/:id/approve', adminAuthenticate, async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.query('UPDATE admins SET is_approved = 1 WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/team/:id', adminAuthenticate, async (req, res) => {
+  try {
+    const MAIN_ADMIN = 'kalinditouristpackages@gmail.com';
+    if (req.adminEmail !== MAIN_ADMIN) {
+      return res.status(403).json({ error: 'Permission denied: Only the Main Administrator can remove staff members.' });
+    }
+
+    const pool = await getPool();
+    
+    // Safety: Prevent the Main Admin from deleting themselves
+    const [target] = await pool.query('SELECT email FROM admins WHERE id = ?', [req.params.id]);
+    if (target.length > 0 && target[0].email === MAIN_ADMIN) {
+      return res.status(400).json({ error: 'Safety Violation: The Main Administrator account cannot be deleted.' });
+    }
+
+    await pool.query('DELETE FROM admins WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -198,21 +322,41 @@ router.delete('/enquiries/:id', adminAuthenticate, async (req, res) => {
   }
 });
 
+const DEFAULT_PKG_IMAGE = 'https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=300';
+
 router.post('/packages', adminAuthenticate, async (req, res) => {
   try {
-    const { id, name, price, duration, districts, features, highlight, image } = req.body;
+    const { id, name, price, duration, districts, features, highlight, image, description } = req.body;
     if (!id || !name || !price || !duration) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing required fields (id, name, price, duration)' });
     }
 
     const pool = await getPool();
+    
+    // Check for duplicate ID
+    const [existing] = await pool.query('SELECT id FROM packages WHERE id = ?', [id]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Package ID (slug) already exists. Please use a unique identifier.' });
+    }
+
     await pool.query(
-      'INSERT INTO packages (id, name, price, duration, districts_json, features_json, highlight, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, name, price, duration, JSON.stringify(districts || []), JSON.stringify(features || []), highlight ? 1 : 0, image]
+      'INSERT INTO packages (id, name, price, duration, districts_json, features_json, description, highlight, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        id.trim().toLowerCase().replace(/\s+/g, '-'), 
+        name, 
+        price, 
+        duration, 
+        JSON.stringify(districts || []), 
+        JSON.stringify(features || []), 
+        description || '',
+        highlight ? 1 : 0, 
+        image || DEFAULT_PKG_IMAGE
+      ]
     );
 
     res.status(201).json({ ok: true });
   } catch (e) {
+    console.error('[ADMIN_CREATE_PACKAGE] Error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -221,36 +365,50 @@ router.delete('/packages/:id', adminAuthenticate, async (req, res) => {
   try {
     const pkgId = req.params.id;
     const pool = await getPool();
-    console.log(`[ADMIN] Deleting package: ${pkgId}`);
+    console.log(`[ADMIN] Request to delete package: "${pkgId}"`);
     
-    // Check if package exists first for better error messages
-    const [existing] = await pool.query('SELECT name FROM packages WHERE id = ?', [pkgId]);
+    // 1. Verify existence
+    const [existing] = await pool.query('SELECT id, name FROM packages WHERE id = ?', [pkgId]);
     if (existing.length === 0) {
-      console.warn(`[ADMIN] Attempted to delete non-existent package: ${pkgId}`);
-      return res.status(404).json({ error: 'Package not found in registry' });
+      console.warn(`[ADMIN] Delete failed: Package "${pkgId}" not found`);
+      return res.status(404).json({ error: 'Package not found in inventory' });
     }
 
+    const packageName = existing[0].name;
+
+    // 2. Perform deletion (Foreign keys will cascade to bookings)
     const [result] = await pool.query('DELETE FROM packages WHERE id = ?', [pkgId]);
     
     if (result.affectedRows === 0) {
-      throw new Error('Failed to remove package from database');
+      console.error(`[ADMIN] Delete failed: No rows affected for ID "${pkgId}"`);
+      throw new Error('Database accepted command but no records were removed');
     }
 
-    console.log(`[ADMIN] Successfully deleted package: ${pkgId} (${existing[0].name})`);
-    res.json({ ok: true });
+    console.log(`[ADMIN] Successfully purged package: "${packageName}" (${pkgId})`);
+    res.json({ ok: true, message: `Package "${packageName}" has been removed.` });
   } catch (e) {
-    console.error(`[ADMIN] Delete package error:`, e.message);
-    res.status(500).json({ error: e.message });
+    console.error(`[ADMIN] Package Purge Error:`, e.stack);
+    res.status(500).json({ error: `Internal Server Error: ${e.message}` });
   }
 });
 
 router.put('/packages/:id', adminAuthenticate, async (req, res) => {
   try {
-    const { name, price, duration, districts, features, image } = req.body;
+    const { name, price, duration, districts, features, highlight, image, description } = req.body;
     const pool = await getPool();
     await pool.query(
-      'UPDATE packages SET name = ?, price = ?, duration = ?, districts_json = ?, features_json = ?, image = ? WHERE id = ?',
-      [name, price, duration, JSON.stringify(districts || []), JSON.stringify(features || []), image, req.params.id]
+      'UPDATE packages SET name = ?, price = ?, duration = ?, districts_json = ?, features_json = ?, description = ?, highlight = ?, image = ? WHERE id = ?',
+      [
+        name, 
+        price, 
+        duration, 
+        JSON.stringify(districts || []), 
+        JSON.stringify(features || []), 
+        description || '',
+        highlight ? 1 : 0,
+        image, 
+        req.params.id
+      ]
     );
     res.json({ ok: true });
   } catch (e) {
