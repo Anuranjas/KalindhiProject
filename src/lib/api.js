@@ -1,4 +1,4 @@
-const defaultBase = import.meta.env.PROD ? '' : 'http://localhost:3000';
+const defaultBase = import.meta.env.PROD ? '' : 'http://127.0.0.1:3000';
 export const API_BASE = import.meta.env.VITE_API_BASE || defaultBase;
 
 export async function api(path, { method = 'GET', body, token } = {}) {
@@ -19,9 +19,9 @@ export async function api(path, { method = 'GET', body, token } = {}) {
     data = { error: text || res.statusText };
   }
 
-  if (!res.ok) {
-    const err = new Error(data.error || `Error ${res.status}: ${res.statusText}`);
-    Object.assign(err, data);
+  if (!res.ok || (data && data.error)) {
+    const err = new Error(data?.error || `Error ${res.status}: ${res.statusText}`);
+    Object.assign(err, data || {});
     throw err;
   }
   return data;

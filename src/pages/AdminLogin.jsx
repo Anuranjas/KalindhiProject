@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api, API_BASE } from '../lib/api';
 
 const downloadCSV = (data, filename) => {
@@ -952,7 +952,23 @@ const BookingsView = ({ bookings, onRefresh, isLoading }) => {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className="text-sm font-medium text-slate-700">{b.package_name}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-slate-700">{b.package_name}</span>
+                                        {b.selected_places_json && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {(() => {
+                                                    try {
+                                                        const pList = typeof b.selected_places_json === 'string' 
+                                                            ? JSON.parse(b.selected_places_json) 
+                                                            : b.selected_places_json;
+                                                        return Array.isArray(pList) ? pList.map((p, i) => (
+                                                            <span key={i} className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100">{p.name || p}</span>
+                                                        )) : null;
+                                                    } catch (e) { return null; }
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className="text-sm font-medium text-slate-600">
@@ -982,6 +998,161 @@ const BookingsView = ({ bookings, onRefresh, isLoading }) => {
     );
 };
 
+const PlacesView = ({ places, onRefresh, isLoading }) => {
+    const [showAdd, setShowAdd] = useState(false);
+    const [editingPlace, setEditingPlace] = useState(null);
+    const [search, setSearch] = useState('');
+    const [newPlace, setNewPlace] = useState({ name: '', district: '', description: '', image: '', price_per_person: 0 });
+
+    const filteredPlaces = useMemo(() => {
+        if (!Array.isArray(places)) return [];
+        if (!search.trim()) return places;
+        const q = search.toLowerCase();
+        return places.filter(p => 
+            p.name?.toLowerCase().includes(q) || 
+            p.district?.toLowerCase().includes(q) ||
+            p.description?.toLowerCase().includes(q)
+        );
+    }, [places, search]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('admin_token');
+        try {
+            const method = editingPlace ? 'PUT' : 'POST';
+            const url = editingPlace ? `/api/admin/places/${editingPlace.id}` : '/api/admin/places';
+            await api(url, { method, body: newPlace, token });
+            setShowAdd(false);
+            setEditingPlace(null);
+            setNewPlace({ name: '', district: '', description: '', image: '', price_per_person: 0 });
+            onRefresh();
+        } catch (err) { alert(err.message); }
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Are you sure you want to delete this place?')) return;
+        const token = localStorage.getItem('admin_token');
+        try {
+            await api(`/api/admin/places/${id}`, { method: 'DELETE', token });
+            onRefresh();
+        } catch (err) { alert(err.message); }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-xl font-bold text-slate-900">Custom Package Places</h2>
+                    <p className="text-sm text-slate-500">Inventory of destinations for custom itinerary building</p>
+                </div>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="relative flex-1 md:min-w-[300px]">
+                        <input 
+                            type="text" 
+                            placeholder="Filter destinations..." 
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 ring-emerald-500/20"
+                        />
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <button 
+                        onClick={() => { setShowAdd(true); setEditingPlace(null); setNewPlace({ name: '', district: '', description: '', image: '', price_per_person: 0 }); }}
+                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap shadow-sm hover:bg-emerald-700"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        Add Place
+                    </button>
+                </div>
+            </div>
+
+            {showAdd && (
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-4">
+                    <form onSubmit={handleSave} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Place Name</label>
+                                <input 
+                                    value={newPlace.name} 
+                                    onChange={e => setNewPlace({...newPlace, name: e.target.value})} 
+                                    required 
+                                    className="w-full border rounded-lg px-4 py-2 focus:ring-2 ring-emerald-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">District</label>
+                                <input 
+                                    value={newPlace.district} 
+                                    onChange={e => setNewPlace({...newPlace, district: e.target.value})} 
+                                    placeholder="e.g. Wayanad"
+                                    className="w-full border rounded-lg px-4 py-2 focus:ring-2 ring-emerald-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Price per Person (Optional)</label>
+                                <input 
+                                    type="number" 
+                                    value={newPlace.price_per_person} 
+                                    onChange={e => setNewPlace({...newPlace, price_per_person: Number(e.target.value)})} 
+                                    className="w-full border rounded-lg px-4 py-2 focus:ring-2 ring-emerald-500 outline-none"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                            <textarea 
+                                value={newPlace.description} 
+                                onChange={e => setNewPlace({...newPlace, description: e.target.value})} 
+                                className="w-full border rounded-lg px-4 py-2 focus:ring-2 ring-emerald-500 outline-none min-h-[100px]"
+                            />
+                        </div>
+                        <div className="flex gap-4">
+                            <button type="submit" className="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold text-sm">Save Place</button>
+                            <button type="button" onClick={() => setShowAdd(false)} className="text-slate-500 font-bold text-sm">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredPlaces.map(place => (
+                    <div key={place.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                        <div>
+                            <div className="flex justify-between items-start">
+                                <h3 className="font-bold text-slate-900 text-lg">{place.name}</h3>
+                                {place.district && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{place.district}</span>}
+                            </div>
+                            <p className="text-sm text-slate-500 mt-2 leading-relaxed line-clamp-3">{place.description}</p>
+                            <p className="text-emerald-600 font-bold mt-4">₹{place.price_per_person} / person</p>
+                        </div>
+                        <div className="mt-6 pt-4 border-t border-slate-100 flex gap-4">
+                            <button 
+                                onClick={() => { setEditingPlace(place); setNewPlace(place); setShowAdd(true); }}
+                                className="text-xs font-bold text-emerald-600 uppercase tracking-wider hover:text-emerald-700"
+                            >
+                                Edit
+                            </button>
+                            <button 
+                                onClick={() => handleDelete(place.id)}
+                                className="text-xs font-bold text-red-600 uppercase tracking-wider hover:text-red-700"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {filteredPlaces.length === 0 && !isLoading && (
+                <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <p className="text-slate-400 font-medium">{search ? 'No destinations match your search.' : 'No custom package places added yet.'}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function AdminPage() {
     const [step, setStep] = useState('login'); // login, verify, dash, register
     const [view, setView] = useState('overview');
@@ -998,6 +1169,7 @@ export default function AdminPage() {
     const [recentBookings, setRecentBookings] = useState([]);
     const [packages, setPackages] = useState([]);
     const [bookings, setBookings] = useState([]);
+    const [places, setPlaces] = useState([]);
     const [users, setUsers] = useState([]);
     const [teamAdmins, setTeamAdmins] = useState([]);
     const [currentAdmin, setCurrentAdmin] = useState(null);
@@ -1008,13 +1180,14 @@ export default function AdminPage() {
         if (!token) return;
         setDataLoading(true);
         try {
-            const [enqData, statsData, packagesData, bookingsData, usersData, teamData] = await Promise.all([
+            const [enqData, statsData, packagesData, bookingsData, usersData, teamData, placesData] = await Promise.all([
                 api('/api/admin/enquiries', { token }),
                 api('/api/admin/stats', { token }),
                 api('/api/packages'),
                 api('/api/admin/bookings', { token }),
                 api('/api/admin/users', { token }),
-                api('/api/admin/team', { token })
+                api('/api/admin/team', { token }),
+                api('/api/admin/places', { token })
             ]);
             setEnquiries(enqData);
             setStats(statsData.stats);
@@ -1023,6 +1196,7 @@ export default function AdminPage() {
             setBookings(bookingsData);
             setUsers(usersData);
             setTeamAdmins(teamData);
+            setPlaces(placesData);
         } catch (e) {
             console.error('Data Refresh Error:', e);
             if (e.message?.includes('Unauthorized') || e.status === 401) {
@@ -1046,8 +1220,8 @@ export default function AdminPage() {
         }
     }, [refreshData]);
 
-    const unreadCount = enquiries.filter(e => !e.is_read && !e.is_archived).length;
-    const pendingAdminsCount = teamAdmins.filter(a => !a.is_approved).length;
+    const unreadCount = Array.isArray(enquiries) ? enquiries.filter(e => !e.is_read && !e.is_archived).length : 0;
+    const pendingAdminsCount = Array.isArray(teamAdmins) ? teamAdmins.filter(a => !a.is_approved).length : 0;
 
     const handleRegister = async (e) => {
         e.preventDefault();
@@ -1345,6 +1519,7 @@ export default function AdminPage() {
                         { id: 'overview', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
                         { id: 'bookings', label: 'Bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
                         { id: 'packages', label: 'Packages', icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
+                        { id: 'places', label: 'Custom Places', icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' },
                         { id: 'users', label: 'Travelers', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
                         { id: 'admins', label: 'Team', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', badge: pendingAdminsCount },
                         { id: 'enquiries', label: 'Enquiries', icon: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z', badge: unreadCount }
@@ -1418,6 +1593,13 @@ export default function AdminPage() {
                             {view === 'packages' && (
                                 <PackageEditor 
                                     packages={packages} 
+                                    onRefresh={refreshData} 
+                                    isLoading={dataLoading}
+                                />
+                            )}
+                            {view === 'places' && (
+                                <PlacesView 
+                                    places={places} 
                                     onRefresh={refreshData} 
                                     isLoading={dataLoading}
                                 />

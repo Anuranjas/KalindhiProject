@@ -74,19 +74,19 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-12">
             <h1 className="serif text-4xl font-semibold text-primary">Verify Access.</h1>
-            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">Enter the security code sent to verify your account</p>
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Enter the security code sent to your registered contact to verify your account</p>
           </div>
 
           <form className="space-y-10" onSubmit={onVerify}>
-            <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
-              <label htmlFor="otp" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Security Code</label>
+            <div className="group border-b border-primary/20 py-2 focus-within:border-accent transition-colors">
+              <label htmlFor="otp" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 group-focus-within:text-accent transition-colors">Security Code</label>
               <input 
                 id="otp"
                 value={otp} 
                 onChange={(e) => setOtp(e.target.value)} 
                 required 
                 maxLength={6}
-                className="block w-full bg-transparent pt-2 pb-1 text-3xl tracking-[0.5em] serif text-center outline-none placeholder:text-primary/10" 
+                className="block w-full bg-transparent pt-2 pb-1 text-3xl tracking-[0.5em] serif text-center outline-none placeholder:text-primary/20" 
                 placeholder="000000" 
               />
             </div>
@@ -118,21 +118,21 @@ export default function Login() {
             <img src={logo} alt="Kalindi" className="h-12 w-12 mx-auto" />
           </Link>
           <h1 className="serif text-4xl font-semibold text-primary">Welcome Back.</h1>
-          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">Enter your credentials to continue</p>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Enter your credentials to continue</p>
         </div>
 
         <form className="space-y-10" onSubmit={onSubmit}>
-          <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
-            <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Email Address</label>
-            <input id="email" name="email" value={form.email} onChange={onChange} type="email" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="guest@example.com" />
+          <div className="group border-b border-primary/20 py-2 focus-within:border-accent transition-colors">
+            <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 group-focus-within:text-accent transition-colors">Email Address</label>
+            <input id="email" name="email" value={form.email} onChange={onChange} type="email" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/30" placeholder="guest@example.com" />
           </div>
-          <div className="group border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
+          <div className="group border-b border-primary/20 py-2 focus-within:border-accent transition-colors">
             <div className="flex justify-between items-center">
-              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Security Code</label>
+              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 group-focus-within:text-accent transition-colors">Security Code</label>
               <button 
                 type="button" 
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-[9px] font-bold uppercase tracking-widest text-primary/40 hover:text-accent transition-colors"
+                className="text-[9px] font-bold uppercase tracking-widest text-primary/60 hover:text-accent transition-colors"
               >
                 {showPassword ? 'Hide' : 'Show'}
               </button>
@@ -144,7 +144,7 @@ export default function Login() {
               onChange={onChange} 
               type={showPassword ? 'text' : 'password'} 
               required 
-              className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" 
+              className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/30" 
               placeholder="••••••••" 
             />
           </div>

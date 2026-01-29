@@ -23,17 +23,17 @@ export default function PackageCard({ id, name, price, duration, features = [], 
       <div className="mb-8 flex justify-between items-start">
         <div>
           <h3 className="serif text-2xl font-semibold text-primary group-hover:text-accent transition-colors">{name}</h3>
-          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">{duration}</p>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">{duration}</p>
         </div>
         <div className="text-right">
           <span className="block serif text-2xl font-bold text-primary">{formatINR(price)}</span>
-          <span className="text-[10px] uppercase tracking-widest text-primary/40">/ Guest</span>
+          <span className="text-[10px] uppercase tracking-widest text-primary/60">/ Guest</span>
         </div>
       </div>
 
       <div className="grow">
-        <ul className="space-y-4 text-[13px] text-primary/70 font-light leading-snug">
-          {features.map((f, i) => (
+        <ul className="space-y-4 text-[13px] text-primary/80 font-normal leading-snug">
+          {(features || []).map((f, i) => (
             <li key={i} className="flex items-center gap-4">
               <span className="h-px w-4 bg-accent/30" />
               <span>{f}</span>

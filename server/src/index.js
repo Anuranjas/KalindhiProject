@@ -20,9 +20,34 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`Origin ${origin} not allowed by CORS`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  next();
+});
+
 // Production Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP if serving frontend from same domain
+  contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(compression());
@@ -30,13 +55,11 @@ app.use(express.json());
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, 
+  max: 1000, // Increased for development/testing
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 app.use('/api/', limiter);
-
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 
 // Serve static files from the 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

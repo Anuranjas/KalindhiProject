@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom';
+import backwaters from '../assets/hero/backwaters.jpg';
+import cultural from '../assets/hero/cultural.jpg';
+import waterfalls from '../assets/hero/waterfalls.jpg';
 
 export default function About() {
   return (
@@ -16,8 +19,8 @@ export default function About() {
               Crafting <span className="italic">Timeless</span> Stories in God's Own Country.
             </h2>
             
-            <div className="space-y-6 text-primary/80 leading-relaxed font-light">
-              <p className="text-base md:text-lg italic serif">
+            <div className="space-y-6 text-primary leading-relaxed font-normal">
+              <p className="text-base md:text-lg italic serif text-primary/90">
                 "We don't just plan trips; we curate moments that transcend the ordinary."
               </p>
               <p>
@@ -37,7 +40,7 @@ export default function About() {
               ].map((item, idx) => (
                 <div key={idx} className="group">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 group-hover:text-accent transition-colors">{item.label}</h4>
-                  <p className="text-[13px] text-primary/60 leading-tight">{item.desc}</p>
+                  <p className="text-[13px] text-primary/80 leading-tight font-medium">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -57,21 +60,21 @@ export default function About() {
             <div className="grid grid-cols-12 grid-rows-12 h-[500px] md:h-[700px] gap-4">
               <div className="col-span-8 row-span-8 overflow-hidden rounded-sm shadow-2xl">
                 <img
-                  src="https://wallpapercave.com/wp/wp8050512.jpg"
+                  src={backwaters}
                   alt="Backwaters"
                   className="h-full w-full object-cover transition-transform duration-1000 hover:scale-110"
                 />
               </div>
               <div className="col-span-4 row-span-5 col-start-9 row-start-3 overflow-hidden rounded-sm shadow-xl">
                 <img
-                  src="https://www.keralatourism.org/images/microsites/munnar/munnar.jpg"
+                  src={waterfalls}
                   alt="Munnar"
                   className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
                 />
               </div>
-              <div className="col-span-5 row-span-4 col-start-2 row-start-9 overflow-hidden rounded-sm shadow-xl mt-4">
+              <div className="col-span-12 row-span-4 col-start-1 row-start-9 overflow-hidden rounded-sm shadow-xl mt-4">
                 <img
-                  src="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=2000&auto=format&fit=crop"
+                  src={cultural}
                   alt="Culture"
                   className="h-full w-full object-cover"
                 />

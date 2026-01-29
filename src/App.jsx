@@ -51,15 +51,15 @@ const Home = ({ packagesRef, contactRef, aboutRef }) => (
             
             <div className="space-y-12">
               <div>
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 mb-4">Direct Message</h4>
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 mb-4">Direct Message</h4>
                 <p className="text-xl serif italic text-primary">+91-90000-00000</p>
               </div>
               <div>
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 mb-4">Electronic Mail</h4>
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 mb-4">Electronic Mail</h4>
                 <p className="text-xl serif italic text-primary">kalinditouristpackages@gmail.com</p>
               </div>
               <div className="max-w-sm">
-                <p className="text-sm text-primary/60 font-light leading-relaxed">
+                <p className="text-sm text-primary/70 font-light leading-relaxed">
                   Our consultants typically respond within 24 hours to craft your definitive itinerary.
                 </p>
               </div>
@@ -81,17 +81,17 @@ const Home = ({ packagesRef, contactRef, aboutRef }) => (
             className="flex flex-col gap-10"
           >
             <div className="space-y-10">
-              <div className="group relative border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
-                <label htmlFor="contact-name" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Full Name</label>
-                <input id="contact-name" name="name" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="Aiden Smith" />
+              <div className="group relative border-b border-primary/20 py-2 focus-within:border-accent transition-colors">
+                <label htmlFor="contact-name" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 group-focus-within:text-accent transition-colors">Full Name</label>
+                <input id="contact-name" name="name" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/30" placeholder="Aiden Smith" />
               </div>
-              <div className="group relative border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
-                <label htmlFor="contact-email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Email Address</label>
-                <input id="contact-email" name="email" type="email" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/10" placeholder="aiden@example.com" />
+              <div className="group relative border-b border-primary/20 py-2 focus-within:border-accent transition-colors">
+                <label htmlFor="contact-email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 group-focus-within:text-accent transition-colors">Email Address</label>
+                <input id="contact-email" name="email" type="email" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none placeholder:text-primary/30" placeholder="aiden@example.com" />
               </div>
-              <div className="group relative border-b border-primary/10 py-2 focus-within:border-accent transition-colors">
-                <label htmlFor="contact-message" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30 group-focus-within:text-accent transition-colors">Your Preferences</label>
-                <textarea id="contact-message" name="message" rows="2" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none resize-none placeholder:text-primary/10" placeholder="Let us know your interests..." />
+              <div className="group relative border-b border-primary/20 py-2 focus-within:border-accent transition-colors">
+                <label htmlFor="contact-message" className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 group-focus-within:text-accent transition-colors">Your Preferences</label>
+                <textarea id="contact-message" name="message" rows="2" required className="block w-full bg-transparent pt-2 pb-1 text-lg serif outline-none resize-none placeholder:text-primary/30" placeholder="Let us know your interests..." />
               </div>
             </div>
             
@@ -111,7 +111,6 @@ function App() {
   const contactRef = useRef(null);
   const aboutRef = useRef(null);
   const location = useLocation();
-  const isAdminPage = location.pathname.startsWith('/admin-login');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

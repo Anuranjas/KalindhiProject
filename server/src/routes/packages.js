@@ -20,4 +20,14 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/places', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const [rows] = await pool.query('SELECT * FROM places ORDER BY name ASC');
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

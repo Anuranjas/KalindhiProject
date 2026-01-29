@@ -34,7 +34,7 @@ export default function Navbar() {
   const avatarUrl = (user && user.avatarUrl) ? user.avatarUrl : `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(displayName)}&backgroundType=gradientLinear&fontWeight=700`;
 
   return (
-    <header className="fixed top-0 z-50 w-full transition-all duration-300 bg-white/50 backdrop-blur-md border-b border-primary/5">
+    <header className="fixed top-0 z-50 w-full transition-all duration-300 bg-white/90 backdrop-blur-md border-b border-primary/10">
       <nav className="mx-auto max-w-7xl px-6 lg:px-12">
         <div className="flex h-20 items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group z-50" onClick={() => setIsMenuOpen(false)}>
@@ -50,15 +50,15 @@ export default function Navbar() {
               <Link 
                 key={item}
                 to={item === 'Home' ? '/' : `/?to=${item.toLowerCase()}`} 
-                className="text-xs font-bold uppercase tracking-[0.2em] text-primary/70 hover:text-primary transition-colors"
+                className="text-xs font-bold uppercase tracking-[0.2em] text-primary hover:text-accent transition-colors underline-offset-8 hover:underline decoration-accent/30"
               >
                 {item}
               </Link>
             ))}
             {!user ? (
-              <Link to="/login" className="text-xs font-bold uppercase tracking-[0.2em] text-primary/70 hover:text-primary transition-colors">Login</Link>
+              <Link to="/login" className="text-xs font-bold uppercase tracking-[0.2em] text-primary hover:text-accent transition-colors underline-offset-8 hover:underline decoration-accent/30">Login</Link>
             ) : (
-              <button onClick={logout} className="text-xs font-bold uppercase tracking-[0.2em] text-primary/70 hover:text-primary cursor-pointer transition-colors">Logout</button>
+              <button onClick={logout} className="text-xs font-bold uppercase tracking-[0.2em] text-primary hover:text-accent cursor-pointer transition-colors underline-offset-8 hover:underline decoration-accent/30">Logout</button>
             )}
           </div>
 

@@ -436,4 +436,56 @@ router.delete('/bookings/:id', adminAuthenticate, async (req, res) => {
   }
 });
 
+// --- Places Management (For Custom Packages) ---
+
+router.get('/places', adminAuthenticate, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const [rows] = await pool.query('SELECT * FROM places ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/places', adminAuthenticate, async (req, res) => {
+  try {
+    const { name, district, description, image, price_per_person } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+
+    const pool = await getPool();
+    await pool.query(
+      'INSERT INTO places (name, district, description, image, price_per_person) VALUES (?, ?, ?, ?, ?)',
+      [name, district || '', description || '', image || '', price_per_person || 0]
+    );
+    res.status(201).json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put('/places/:id', adminAuthenticate, async (req, res) => {
+  try {
+    const { name, district, description, image, price_per_person } = req.body;
+    const pool = await getPool();
+    await pool.query(
+      'UPDATE places SET name = ?, district = ?, description = ?, image = ?, price_per_person = ? WHERE id = ?',
+      [name, district, description, image, price_per_person, req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/places/:id', adminAuthenticate, async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.query('DELETE FROM places WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

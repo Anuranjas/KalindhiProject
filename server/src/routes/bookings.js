@@ -17,7 +17,7 @@ router.get('/my', authenticate, async (req, res) => {
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { applicant_name, email, people_count, transport_mode, package_date, package_id, package_name } = req.body || {};
+    const { applicant_name, email, people_count, transport_mode, package_date, package_id, package_name, selected_places, total_price } = req.body || {};
     
     // Ensure we use the authenticated user's email from token
     const userEmail = req.userEmail || email;
@@ -38,17 +38,28 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid package selected' });
     }
     const pkgName = package_name || pkgRows[0].name;
+    const placesJson = selected_places ? JSON.stringify(selected_places) : null;
+    const finalPrice = total_price || (pkgRows[0].price * count);
+
     await pool.query(
-      'INSERT INTO bookings (applicant_name, email, people_count, transport_mode, package_id, package_name, package_date, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [userName, userEmail, count, transport_mode, package_id, pkgName, package_date, 'paid']
+      'INSERT INTO bookings (applicant_name, email, people_count, transport_mode, package_id, package_name, package_date, payment_status, selected_places_json, total_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [userName, userEmail, count, transport_mode, package_id, pkgName, package_date, 'paid', placesJson, finalPrice]
     );
 
     // Confirmation Email
     try {
+      const placesList = selected_places && selected_places.length > 0 
+        ? `\nCustom Places:\n${selected_places.map(p => `- ${p.name}`).join('\n')}` 
+        : '';
+
+      const placesHtml = selected_places && selected_places.length > 0
+        ? `<div style="margin-top: 15px; font-size: 13px;"><strong>Custom Itinerary:</strong><ul style="margin: 5px 0;">${selected_places.map(p => `<li>${p.name}</li>`).join('')}</ul></div>`
+        : '';
+
       await sendMail({
         to: userEmail,
         subject: `Booking & Payment Confirmed: ${pkgName} - Kalindi`,
-        text: `Hi ${userName},\n\nYour booking and payment for "${pkgName}" is confirmed for ${package_date}.\n\nDetails:\nPackage: ${pkgName}\nDate: ${package_date}\nPeople: ${people_count}\nTransport: ${transport_mode}\nStatus: Paid\n\nOur concierge will contact you with the itinerary details shortly.\n\nWarm regards,\nKalindi Team`,
+        text: `Hi ${userName},\n\nYour booking and payment for "${pkgName}" is confirmed for ${package_date}.${placesList}\n\nDetails:\nPackage: ${pkgName}\nDate: ${package_date}\nPeople: ${people_count}\nTransport: ${transport_mode}\nStatus: Paid\n\nOur concierge will contact you with the itinerary details shortly.\n\nWarm regards,\nKalindi Team`,
         html: `
           <div style="font-family: serif; color: #1a2e1a; padding: 40px; background-color: #fdfaf5; border: 1px solid #c5a059; max-width: 600px; margin: 0 auto;">
             <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 10px; margin-bottom: 30px;">Confirmed Reservation & Payment</p>
@@ -60,6 +71,7 @@ router.post('/', authenticate, async (req, res) => {
               <p style="margin: 5px 0;"><strong>Commencement:</strong> ${package_date}</p>
               <p style="margin: 5px 0;"><strong>Travelers:</strong> ${people_count}</p>
               <p style="margin: 5px 0;"><strong>Navigation:</strong> ${transport_mode}</p>
+              ${placesHtml}
               <p style="margin: 5px 0;"><strong>Payment:</strong> <span style="color: #1a2e1a; font-weight: bold;">Confirmed</span></p>
             </div>
 

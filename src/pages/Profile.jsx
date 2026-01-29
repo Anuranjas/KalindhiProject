@@ -8,6 +8,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [activeTab, setActiveTab] = useState('upcoming');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -89,6 +90,12 @@ export default function Profile() {
   const displayName = user?.name || user?.email || 'Guest';
   const avatarUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(displayName)}&backgroundType=gradientLinear&fontWeight=700`;
 
+  const today = new Date().toISOString().split('T')[0];
+  const safeBookings = Array.isArray(bookings) ? bookings : [];
+  const upcomingBookings = safeBookings.filter(b => b.package_date >= today);
+  const pastBookings = safeBookings.filter(b => b.package_date < today);
+  const activeBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings;
+
   return (
     <main className="min-h-screen bg-sand pt-32 pb-20 px-6">
       <div className="max-w-4xl mx-auto">
@@ -112,7 +119,9 @@ export default function Profile() {
                 </div>
               </div>
               <h2 className="serif text-2xl text-primary">{displayName}</h2>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40 mt-2">Member since {new Date(user?.createdAt).toLocaleDateString()}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40 mt-2">
+                Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'the Beginning'}
+              </p>
             </div>
           </div>
 
@@ -179,35 +188,88 @@ export default function Profile() {
             </form>
 
             <div className="mt-24 pt-12 border-t border-primary/5">
-              <h3 className="serif text-3xl text-primary mb-12">Your Reserved Journeys</h3>
+              <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+                <div>
+                  <h3 className="serif text-3xl text-primary lowercase tracking-tight">Your Reserved Journeys</h3>
+                  <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-primary/30 mt-1">A chronicle of your escapes</p>
+                </div>
+                
+                <div className="flex bg-primary/5 p-1 rounded-full">
+                  <button 
+                    onClick={() => setActiveTab('upcoming')}
+                    className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'upcoming' ? 'bg-primary text-white shadow-lg' : 'text-primary/40 hover:text-primary'}`}
+                  >
+                    Upcoming ({upcomingBookings.length})
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('previous')}
+                    className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'previous' ? 'bg-primary text-white shadow-lg' : 'text-primary/40 hover:text-primary'}`}
+                  >
+                    Previous ({pastBookings.length})
+                  </button>
+                </div>
+              </div>
               
               <div className="space-y-6">
-                {bookings.length === 0 ? (
-                  <div className="p-12 text-center border border-primary/5 rounded-2xl bg-white/50">
-                    <p className="serif text-lg italic text-primary/30 mb-2">No expeditions found.</p>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary/20">Your collection will appear here once you begin.</p>
+                {activeBookings.length === 0 ? (
+                  <div className="p-16 text-center border border-dashed border-primary/10 rounded-3xl bg-white/30 backdrop-blur-sm">
+                    <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6 text-primary/20 text-2xl">
+                      {activeTab === 'upcoming' ? '⛰️' : '📜'}
+                    </div>
+                    <p className="serif text-xl italic text-primary/40 mb-2">
+                      {activeTab === 'upcoming' ? 'The horizon is clear.' : 'The archives are empty.'}
+                    </p>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary/20 max-w-[200px] mx-auto leading-relaxed">
+                      {activeTab === 'upcoming' ? 'No future expeditions currently scheduled in your ledger.' : 'Your previous footprints have not been recorded yet.'}
+                    </p>
                   </div>
                 ) : (
-                  bookings.map(b => (
-                    <div key={b.id} className="bg-white p-8 border border-primary/5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-accent/20 transition-all duration-500">
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Confirmed Expedition</div>
-                        <h4 className="serif text-2xl text-primary lowercase">{b.package_name}</h4>
-                        <div className="flex gap-4 mt-3">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40">{new Date(b.package_date).toLocaleDateString()}</span>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40">•</span>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40 leading-none">{b.transport_mode}</span>
+                  activeBookings.map(b => (
+                    <div key={b.id} className="relative overflow-hidden bg-white p-8 border border-primary/5 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-accent/40 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-700">
+                      {/* Decorative accent for previous bookings */}
+                      {activeTab === 'previous' && (
+                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                      )}
+                      
+                      <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className={`text-[9px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 rounded-full ${activeTab === 'upcoming' ? 'bg-accent/10 text-accent' : 'bg-primary/5 text-primary/40'}`}>
+                            {activeTab === 'upcoming' ? 'Active Expedition' : 'Past Journey'}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary/20">Ref: KLN-{b.id.toString().padStart(4, '0')}</span>
+                        </div>
+                        
+                        <h4 className="serif text-2xl text-primary lowercase group-hover:text-accent transition-colors duration-500">{b.package_name}</h4>
+                        
+                        <div className="flex flex-wrap gap-y-2 gap-x-6 mt-4">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/50">{new Date(b.package_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/50 leading-none">{b.transport_mode}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-right">
-                          <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${b.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-                            {b.payment_status === 'paid' ? 'Paid & Verified' : 'Pending Verification'}
+                      
+                      <div className="flex items-center gap-10 w-full md:w-auto relative z-10">
+                        <div className="text-left md:text-right flex-1 md:flex-initial">
+                          <div className="text-lg font-bold text-primary mb-1">
+                            ₹{b.total_price?.toLocaleString() || '—'}
                           </div>
-                          <div className="text-[10px] font-bold text-primary/20 uppercase tracking-widest italic">{b.people_count} {b.people_count > 1 ? 'Travelers' : 'Traveler'}</div>
+                          <div className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 ${b.payment_status === 'paid' ? 'text-green-600/70' : 'text-amber-600/70'}`}>
+                            {b.payment_status === 'paid' ? 'Settled & Verified' : 'Awaiting Audit'}
+                          </div>
+                          <div className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">{b.people_count} {b.people_count > 1 ? 'Travelers' : 'Traveler'}</div>
                         </div>
-                        <div className="h-10 w-10 rounded-full flex items-center justify-center bg-sand text-primary opacity-20 group-hover:opacity-100 group-hover:bg-accent group-hover:text-white transition-all cursor-pointer">
-                          <span className="text-lg">↓</span>
+                        
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all duration-500 shadow-sm ${activeTab === 'upcoming' ? 'bg-primary text-white scale-100' : 'bg-sand text-primary/20 group-hover:bg-accent group-hover:text-white'}`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
                         </div>
                       </div>
                     </div>

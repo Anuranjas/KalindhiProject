@@ -5,7 +5,9 @@ import { api } from '../../lib/api';
 
 export default function PackagesSection() {
   const [packages, setPackages] = useState([]);
+  const [availablePlaces, setAvailablePlaces] = useState([]);
   const [district, setDistrict] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showBooking, setShowBooking] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState('');
 
@@ -13,22 +15,79 @@ export default function PackagesSection() {
     api('/api/packages')
       .then(setPackages)
       .catch(console.error);
+
+    api('/api/packages/places')
+      .then(setAvailablePlaces)
+      .catch(console.error);
   }, []);
 
   const availableDistricts = useMemo(() => {
-    const districts = new Set();
-    packages.forEach(p => {
-      if (Array.isArray(p.districts)) {
-        p.districts.forEach(d => districts.add(d));
-      }
-    });
-    return Array.from(districts).sort();
-  }, [packages]);
+    const districtsList = new Set();
+    
+    // 1. Get districts from packages
+    if (Array.isArray(packages)) {
+      packages.forEach(p => {
+        const rawDistricts = p.districts || p.districts_json;
+        if (!rawDistricts) return;
+        try {
+          const parsed = typeof rawDistricts === 'string' ? JSON.parse(rawDistricts) : rawDistricts;
+          if (Array.isArray(parsed)) parsed.forEach(d => d && districtsList.add(d));
+          else if (typeof parsed === 'string') districtsList.add(parsed);
+        } catch (e) {
+          if (typeof rawDistricts === 'string') districtsList.add(rawDistricts);
+        }
+      });
+    }
+
+    // 2. Get districts from custom places (so users can find custom booking options)
+    if (Array.isArray(availablePlaces)) {
+      availablePlaces.forEach(p => {
+        if (p.district) districtsList.add(p.district);
+      });
+    }
+
+    const result = Array.from(districtsList).filter(Boolean).sort();
+    return result;
+  }, [packages, availablePlaces]);
 
   const filtered = useMemo(() => {
-    if (!district) return packages;
-    return packages.filter(p => (p.districts || []).includes(district));
-  }, [district, packages]);
+    let result = Array.isArray(packages) ? packages : [];
+
+    // 1. Filter by District
+    if (district) {
+      result = result.filter(p => {
+        const rawDistricts = p.districts || p.districts_json;
+        if (!rawDistricts) return false;
+        try {
+          const parsed = typeof rawDistricts === 'string' ? JSON.parse(rawDistricts) : rawDistricts;
+          return Array.isArray(parsed) ? parsed.includes(district) : parsed === district;
+        } catch (e) {
+          return rawDistricts === district;
+        }
+      });
+
+      // Ensure 'custom' package is included if there are custom places in that district
+      const customPkg = Array.isArray(packages) ? packages.find(p => p.id === 'custom') : null;
+      if (customPkg && !result.some(p => p.id === 'custom')) {
+        const hasPlaces = Array.isArray(availablePlaces) && availablePlaces.some(plc => plc.district === district);
+        if (hasPlaces) result = [...result, customPkg];
+      }
+    }
+
+    // 2. Search Filter (by name, description, or district)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(p => {
+        const nameMatch = p.name?.toLowerCase().includes(q);
+        const descMatch = p.description?.toLowerCase().includes(q);
+        const dists = p.districts || p.districts_json || '';
+        const distMatch = dists.toString().toLowerCase().includes(q);
+        return nameMatch || descMatch || distMatch;
+      });
+    }
+
+    return result;
+  }, [district, searchQuery, packages, availablePlaces]);
 
   return (
     <section className="py-24 md:py-32 bg-white">
@@ -42,21 +101,37 @@ export default function PackagesSection() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/30">Select a Realm</span>
-            <div className="relative group">
-              <select
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="appearance-none bg-primary text-white text-[11px] font-bold uppercase tracking-[0.2em] px-12 py-5 rounded-full cursor-pointer transition-all hover:bg-primary/90 min-w-60 text-center outline-none ring-offset-2 focus:ring-1 ring-accent/40"
-              >
-                <option value="" className="bg-white text-primary text-left">All Districts</option>
-                {availableDistricts.map(d => (
-                  <option key={d} value={d} className="bg-white text-primary py-4">{d}</option>
-                ))}
-              </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-white/50 group-hover:text-white transition-colors">
-                ↓
+          <div className="flex flex-col gap-6 min-w-[320px]">
+            <div className="space-y-4">
+              <div className="relative">
+                <input 
+                  type="text"
+                  placeholder="Search destinations or packages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-full px-6 py-3.5 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                />
+                <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              <div className="relative group">
+                <select
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  className="appearance-none w-full bg-primary text-white text-[10px] font-bold uppercase tracking-[0.2em] px-8 py-4 rounded-full cursor-pointer transition-all hover:bg-black text-center outline-none ring-2 ring-primary/5 focus:ring-accent/40"
+                >
+                  <option value="" className="bg-white text-primary text-left font-bold py-4">All Destinations</option>
+                  {availableDistricts.map(d => (
+                    <option key={d} value={d} className="bg-white text-primary py-4">{d}</option>
+                  ))}
+                </select>
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-white/50 group-hover:text-white transition-colors">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>

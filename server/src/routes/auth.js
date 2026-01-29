@@ -28,7 +28,8 @@ function toPublicUser(u) {
   return { id: u.id, name: u.name, email: u.email, isVerified: !!u.is_verified, createdAt: u.created_at };
 }
 
-async function sendOTP(email, code) {
+async function sendOTP(email, code, phone = null) {
+  // 1. Send Email OTP
   try {
     await sendMail({
       to: email,
@@ -45,11 +46,17 @@ async function sendOTP(email, code) {
       `
     });
   } catch (err) {
-    console.warn(`Fallback to console: [OTP] To: ${email}, Code: ${code}`);
+    console.warn(`Fallback to console: [OTP Email] To: ${email}, Code: ${code}`);
+  }
+
+  // 2. Send SMS OTP (Placeholder for SMS Service like Twilio)
+  if (phone) {
+    console.log(`[SMS_GATEWAY] Sending OTP ${code} to phone: ${phone}`);
+    // Example: twilio.messages.create({ body: `Your Kalindi OTP is ${code}`, from: '+123456789', to: phone });
   }
 }
 
-async function generateAndSendOTP(pool, email) {
+async function generateAndSendOTP(pool, email, phone = null) {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -59,12 +66,12 @@ async function generateAndSendOTP(pool, email) {
     [email, code, expires]
   );
 
-  await sendOTP(email, code);
+  await sendOTP(email, code, phone);
 }
 
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, phone, password } = req.body || {};
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email and password are required' });
     }
@@ -77,11 +84,11 @@ router.post('/signup', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     await pool.query(
-      'INSERT INTO users (name, email, password_hash, is_verified) VALUES (?, ?, ?, 0)',
-      [name, email, hash]
+      'INSERT INTO users (name, email, phone, password_hash, is_verified) VALUES (?, ?, ?, ?, 0)',
+      [name, email, phone || null, hash]
     );
 
-    await generateAndSendOTP(pool, email);
+    await generateAndSendOTP(pool, email, phone);
 
     res.status(201).json({ 
       message: 'Registration successful. Please verify your OTP.',
@@ -108,7 +115,7 @@ router.post('/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
     if (!user.is_verified) {
-      await generateAndSendOTP(pool, email);
+      await generateAndSendOTP(pool, email, user.phone);
       return res.status(403).json({ 
         error: 'Account not verified', 
         requiresVerification: true,
