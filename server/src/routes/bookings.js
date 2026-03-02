@@ -39,11 +39,22 @@ router.post('/', authenticate, async (req, res) => {
     }
     const pkgName = package_name || pkgRows[0].name;
     const placesJson = selected_places ? JSON.stringify(selected_places) : null;
-    const finalPrice = total_price || (pkgRows[0].price * count);
+    const basePrice = pkgRows[0].price; // Should be a number from mysql2
+    const finalPrice = (total_price !== undefined && total_price !== null) ? Number(total_price) : (Number(basePrice) * count);
+    const paymentStatus = 'paid';
+    
+    console.log('DEBUG VALUES:', {
+      basePrice,
+      count,
+      total_price,
+      finalPrice,
+      typeOfFinalPrice: typeof finalPrice,
+      isFinalPriceNaN: isNaN(finalPrice)
+    });
 
     await pool.query(
       'INSERT INTO bookings (applicant_name, email, people_count, transport_mode, package_id, package_name, package_date, payment_status, selected_places_json, total_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [userName, userEmail, count, transport_mode, package_id, pkgName, package_date, 'paid', placesJson, finalPrice]
+      [userName, userEmail, count, transport_mode, package_id, pkgName, package_date, paymentStatus, placesJson, isNaN(finalPrice) ? 0 : finalPrice]
     );
 
     // Confirmation Email
