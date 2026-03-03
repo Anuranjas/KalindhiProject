@@ -8,7 +8,9 @@ export default function BookPackage() {
   const [user, setUser] = useState(null);
   const [packages, setPackages] = useState([]);
   const [availablePlaces, setAvailablePlaces] = useState([]);
-  const [selectedPlaces, setSelectedPlaces] = useState([]);
+  const [startingPoint, setStartingPoint] = useState('');
+  const [destinationPoint, setDestinationPoint] = useState('');
+  const [middlePoints, setMiddlePoints] = useState([]);
   const [districtFilter, setDistrictFilter] = useState('All');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -68,17 +70,37 @@ export default function BookPackage() {
     } catch {}
   }, [location, navigate]);
 
-  const initial = useMemo(() => ({
-    applicant_name: user?.name || '',
-    email: user?.email || '',
-    people_count: 2,
-    transport_mode: 'Car',
-    package_date: '',
-    package_id: ''
-  }), [user]);
+  const initial = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const type = searchParams.get('type');
+    return {
+      applicant_name: user?.name || '',
+      email: user?.email || '',
+      people_count: 2,
+      transport_mode: 'Car',
+      package_date: '',
+      package_id: type === 'custom' ? 'custom' : ''
+    };
+  }, [user, location.search]);
 
   const [form, setForm] = useState(initial);
   useEffect(() => setForm(initial), [initial]);
+
+  // Read URL params and apply to layout
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const startObj = searchParams.get('start');
+    const endObj = searchParams.get('end');
+    const middleObj = searchParams.get('middle');
+
+    if (startObj) setStartingPoint(startObj);
+    if (endObj) setDestinationPoint(endObj);
+    if (middleObj && availablePlaces.length > 0) {
+      const middleIds = middleObj.split(',').map(Number);
+      const filteredMiddles = availablePlaces.filter(p => middleIds.includes(p.id));
+      setMiddlePoints(filteredMiddles);
+    }
+  }, [location.search, availablePlaces]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -100,7 +122,11 @@ export default function BookPackage() {
         package_date: form.package_date,
         package_id: form.package_id,
         package_name: pkg?.name || (form.package_id === 'custom' ? 'Custom Package' : ''),
-        selected_places: selectedPlaces.map(p => ({ id: p.id, name: p.name, price: p.price_per_person }))
+        selected_places: form.package_id === 'custom' ? [
+          ...(startingPoint ? [availablePlaces.find(p => p.id === Number(startingPoint))] : []),
+          ...middlePoints,
+          ...(destinationPoint ? [availablePlaces.find(p => p.id === Number(destinationPoint))] : [])
+        ].filter(Boolean).map(p => ({ id: p.id, name: p.name, price: p.price_per_person, type: p.id === Number(startingPoint) ? 'Start' : p.id === Number(destinationPoint) ? 'Destination' : 'Middle' })) : []
       };
       await api('/api/bookings', { method: 'POST', body: payload });
       setSuccess('Your booking and payment has been processed successfully! We\'ll contact you soon.');
@@ -185,49 +211,79 @@ export default function BookPackage() {
             </div>
 
             {form.package_id === 'custom' && (
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-4 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-emerald-900">Customize Your Itinerary</h3>
-                    <p className="text-[11px] text-emerald-700">Select the places you want to visit in {districtFilter === 'All' ? 'Kerala' : districtFilter}.</p>
-                  </div>
-                </div>
-                
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {availablePlaces
-                    .filter(p => districtFilter === 'All' || p.district === districtFilter)
-                    .map(place => (
-                    <label key={place.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${selectedPlaces.some(p => p.id === place.id) ? 'bg-emerald-100 border-emerald-300 ring-1 ring-emerald-300' : 'bg-white border-slate-200 hover:border-emerald-200'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                        checked={selectedPlaces.some(p => p.id === place.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedPlaces([...selectedPlaces, place]);
-                          } else {
-                            setSelectedPlaces(selectedPlaces.filter(p => p.id !== place.id));
-                          }
-                        }}
-                      />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <p className="text-sm font-bold text-slate-800">{place.name}</p>
-                          {place.district && <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-bold uppercase">{place.district}</span>}
-                        </div>
-                        {place.price_per_person > 0 && <p className="text-[10px] font-bold text-emerald-600 uppercase mt-0.5">₹{place.price_per_person} per person</p>}
-                      </div>
-                    </label>
-                  ))}
-                  {availablePlaces.filter(p => districtFilter === 'All' || p.district === districtFilter).length === 0 && (
-                    <p className="col-span-full text-center py-6 text-sm text-slate-500">No places found in this district.</p>
-                  )}
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-4 space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-emerald-900">Customize Your Itinerary</h3>
+                  <p className="text-[11px] text-emerald-700">Select your starting point, destination, and any places you want to visit in between.</p>
                 </div>
 
-                {selectedPlaces.length > 0 && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Starting Point</label>
+                    <select 
+                      value={startingPoint} 
+                      onChange={(e) => setStartingPoint(e.target.value)}
+                      className="w-full rounded-md border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                    >
+                      <option value="">Select Starting Point</option>
+                      {availablePlaces.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.district})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Destination Point</label>
+                    <select 
+                      value={destinationPoint} 
+                      onChange={(e) => setDestinationPoint(e.target.value)}
+                      className="w-full rounded-md border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                    >
+                      <option value="">Select Destination Point</option>
+                      {availablePlaces.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.district})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">Middle Points (Multi-select)</label>
+                  <div className="grid gap-3 sm:grid-cols-2 max-h-60 overflow-y-auto p-1">
+                    {availablePlaces
+                      .filter(p => p.id !== Number(startingPoint) && p.id !== Number(destinationPoint))
+                      .filter(p => districtFilter === 'All' || p.district === districtFilter)
+                      .map(place => (
+                      <label key={place.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${middlePoints.some(p => p.id === place.id) ? 'bg-emerald-100 border-emerald-300 ring-1 ring-emerald-300' : 'bg-white border-slate-200 hover:border-emerald-200'}`}>
+                        <input 
+                          type="checkbox" 
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          checked={middlePoints.some(p => p.id === place.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMiddlePoints([...middlePoints, place]);
+                            } else {
+                              setMiddlePoints(middlePoints.filter(p => p.id !== place.id));
+                            }
+                          }}
+                        />
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <p className="text-sm font-bold text-slate-800">{place.name}</p>
+                            {place.district && <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-bold uppercase">{place.district}</span>}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                    {availablePlaces.filter(p => p.id !== Number(startingPoint) && p.id !== Number(destinationPoint)).filter(p => districtFilter === 'All' || p.district === districtFilter).length === 0 && (
+                      <p className="col-span-full text-center py-4 text-sm text-slate-500">No middle points available in this district.</p>
+                    )}
+                  </div>
+                </div>
+
+                {(startingPoint || destinationPoint || middlePoints.length > 0) && (
                   <div className="pt-2 border-t border-emerald-100">
                     <p className="text-xs font-medium text-emerald-800">
-                      Added {selectedPlaces.length} places to your itinerary
+                      Itinerary configured with {middlePoints.length} intermediate stops.
                     </p>
                   </div>
                 )}

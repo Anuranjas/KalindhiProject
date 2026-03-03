@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { api } from '../lib/api';
+import { api, routesApi } from '../lib/api';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [purchasedRoutes, setPurchasedRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +37,12 @@ export default function Profile() {
             const data = await api('/api/bookings/my');
             setBookings(data);
           } catch (e) { console.error('Failed to load bookings'); }
+
+          // Fetch purchased routes
+          try {
+            const routesData = await routesApi.getMyRoutes();
+            setPurchasedRoutes(routesData);
+          } catch (e) { console.error('Failed to load routes'); }
         }
       } catch (err) {
         setError('Failed to load profile');
@@ -271,6 +278,47 @@ export default function Profile() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="mt-24 pt-12 border-t border-primary/5">
+              <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+                <div>
+                  <h3 className="serif text-3xl text-primary lowercase tracking-tight">Your Purchased Routes</h3>
+                  <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-primary/30 mt-1">Directions and famous destinations</p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
+                {purchasedRoutes.length === 0 ? (
+                  <div className="col-span-full p-16 text-center border border-dashed border-primary/10 rounded-3xl bg-white/30 backdrop-blur-sm">
+                    <p className="serif text-xl italic text-primary/40">No routes purchased yet.</p>
+                  </div>
+                ) : (
+                  purchasedRoutes.map(route => (
+                    <div key={route.id} className="bg-white p-6 border border-primary/5 rounded-3xl hover:border-accent/40 hover:shadow-xl transition-all group">
+                      <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-accent mb-2">Package Route</div>
+                      <h4 className="serif text-xl text-primary mb-2 line-clamp-1">{route.package_name}</h4>
+                      <div className="space-y-1 mb-4">
+                        <p className="text-[10px] text-primary/60 line-clamp-1"><span className="font-bold opacity-40 uppercase">To:</span> {route.destination_name}</p>
+                        <p className="text-[10px] text-primary/60 line-clamp-1"><span className="font-bold opacity-40 uppercase">From:</span> {route.from_location}</p>
+                      </div>
+                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-primary/5">
+                        <span className="text-[9px] text-primary/30 uppercase font-bold tracking-widest">
+                          {new Date(route.purchased_at).toLocaleDateString()}
+                        </span>
+                        <a 
+                          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(route.from_location)}&destination=${route.destination_lat},${route.destination_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[9px] font-bold uppercase tracking-widest text-accent hover:underline flex items-center gap-1"
+                        >
+                          Google Maps <span className="group-hover:translate-x-1 transition-transform">→</span>
+                        </a>
                       </div>
                     </div>
                   ))

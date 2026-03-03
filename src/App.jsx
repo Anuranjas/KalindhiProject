@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
 import PackagesSection from './components/Packages/PackagesSection'
+import CustomPackageSection from './components/Packages/CustomPackageSection'
 import Footer from './components/Footer'
 import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom'
 import Login from './pages/Login'
@@ -11,6 +12,7 @@ import BookPackage from './pages/BookPackage'
 import Profile from './pages/Profile'
 import AdminLogin from './pages/AdminLogin'
 import { useEffect, useRef } from 'react'
+import { api } from './lib/api'
 
 function ProtectedLayout() {
   const location = useLocation();
@@ -42,6 +44,7 @@ const Home = ({ packagesRef, contactRef, aboutRef }) => (
     <div ref={packagesRef}>
       <PackagesSection />
     </div>
+    <CustomPackageSection />
     <section ref={contactRef} className="py-24 md:py-40 bg-sand">
       <div className="mx-auto max-w-7xl px-6 lg:px-12">
         <div className="grid gap-20 lg:grid-cols-2">
@@ -71,9 +74,8 @@ const Home = ({ packagesRef, contactRef, aboutRef }) => (
               e.preventDefault();
               const form = e.currentTarget;
               const data = Object.fromEntries(new FormData(form));
-              import('./lib/api').then(({ api }) =>
-                api('/api/contact', { method: 'POST', body: { name: data.name, email: data.email, message: data.message } })
-              ).then(() => {
+              api('/api/contact', { method: 'POST', body: { name: data.name, email: data.email, message: data.message } })
+              .then(() => {
                 alert('We have received your request. A consultant will be in touch shortly.');
                 form.reset();
               }).catch((err) => alert(err.message));

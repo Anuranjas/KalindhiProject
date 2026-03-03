@@ -26,3 +26,8 @@ export async function api(path, { method = 'GET', body, token } = {}) {
   }
   return data;
 }
+
+export const routesApi = {
+  // Admin Routes
+  getPackages: () => api('/api/packages'),
+};

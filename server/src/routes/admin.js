@@ -543,3 +543,54 @@ router.delete('/places/:id', adminAuthenticate, async (req, res) => {
 });
 
 export default router;
+
+// Routes for Directions Feature
+router.get('/purchased-routes', adminAuthenticate, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const [routes] = await pool.query(
+      `SELECT upr.*, u.name as user_name, u.email as user_email, fp.name as place_name 
+       FROM user_purchased_routes upr 
+       JOIN users u ON upr.user_id = u.id 
+       JOIN famous_places fp ON upr.place_id = fp.id 
+       ORDER BY upr.purchased_at DESC`
+    );
+    res.json(routes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/famous-places', adminAuthenticate, async (req, res) => {
+  try {
+    const { name, description, latitude, longitude } = req.body;
+    if (!name || !latitude || !longitude) {
+      return res.status(400).json({ error: 'Name, latitude, and longitude are required' });
+    }
+    const pool = await getPool();
+    await pool.query(
+      'INSERT INTO famous_places (name, description, latitude, longitude) VALUES (?, ?, ?, ?)',
+      [name, description, latitude, longitude]
+    );
+    res.status(201).json({ message: 'Famous place added' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Updated Routes for Package-specific Directions
+router.get('/package-purchased-routes', adminAuthenticate, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const [routes] = await pool.query(
+      `SELECT upr.*, u.name as user_name, u.email as user_email, p.name as package_name 
+       FROM package_purchased_routes upr 
+       JOIN users u ON upr.user_id = u.id 
+       JOIN packages p ON upr.package_id = p.id 
+       ORDER BY upr.purchased_at DESC`
+    );
+    res.json(routes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});

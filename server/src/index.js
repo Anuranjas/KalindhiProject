@@ -11,6 +11,8 @@ import adminRouter from './routes/admin.js';
 import contactRouter from './routes/contact.js';
 import bookingsRouter from './routes/bookings.js';
 import packagesRouter from './routes/packages.js';
+import routesRouter from './routes/routes.js';
+import placesRouter from './routes/places.js';
 import { getPool } from './mysql.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -84,6 +86,8 @@ app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/packages', packagesRouter);
+app.use('/api/routes', routesRouter);
+app.use('/api/places', placesRouter);
 
 // Handle SPA routing - serve index.html for non-API routes
 app.get('*', (req, res) => {

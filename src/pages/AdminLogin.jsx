@@ -998,6 +998,63 @@ const BookingsView = ({ bookings, onRefresh, isLoading }) => {
     );
 };
 
+const PurchasedRoutesView = ({ routes, onRefresh, isLoading }) => {
+    return (
+        <div className="space-y-6">
+            <header className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Purchased Route Directions</h1>
+                    <p className="text-sm text-slate-500 mt-1">Monitor navigational guidance purchased by travelers</p>
+                </div>
+                <button onClick={onRefresh} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+                    <svg className={`w-5 h-5 \${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+            </header>
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <th className="p-4">Traveler</th>
+                            <th className="p-4">Package</th>
+                            <th className="p-4">Destination</th>
+                            <th className="p-4">From</th>
+                            <th className="p-4 text-right">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {routes.map(r => (
+                            <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="p-4">
+                                    <p className="text-sm font-bold text-slate-900">{r.user_name}</p>
+                                    <p className="text-[10px] text-slate-400">{r.user_email}</p>
+                                </td>
+                                <td className="p-4">
+                                    <p className="text-sm font-semibold text-slate-700">{r.package_name}</p>
+                                </td>
+                                <td className="p-4">
+                                    <p className="text-sm font-semibold text-emerald-600">{r.destination_name}</p>
+                                </td>
+                                <td className="p-4 text-xs text-slate-500">
+                                    {r.from_location}
+                                </td>
+                                <td className="p-4 text-right text-xs text-slate-400">
+                                    {new Date(r.purchased_at).toLocaleDateString()}
+                                </td>
+                            </tr>
+                        ))}
+                        {routes.length === 0 && (
+                            <tr>
+                                <td colSpan="4" className="p-10 text-center text-slate-400 italic text-sm">No routes have been purchased yet.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
 const PlacesView = ({ places, onRefresh, isLoading }) => {
     const [showAdd, setShowAdd] = useState(false);
     const [editingPlace, setEditingPlace] = useState(null);
@@ -1170,6 +1227,7 @@ export default function AdminPage() {
     const [packages, setPackages] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [places, setPlaces] = useState([]);
+    const [purchasedRoutes, setPurchasedRoutes] = useState([]);
     const [users, setUsers] = useState([]);
     const [teamAdmins, setTeamAdmins] = useState([]);
     const [currentAdmin, setCurrentAdmin] = useState(null);
@@ -1180,14 +1238,15 @@ export default function AdminPage() {
         if (!token) return;
         setDataLoading(true);
         try {
-            const [enqData, statsData, packagesData, bookingsData, usersData, teamData, placesData] = await Promise.all([
+            const [enqData, statsData, packagesData, bookingsData, usersData, teamData, placesData, routesData] = await Promise.all([
                 api('/api/admin/enquiries', { token }),
                 api('/api/admin/stats', { token }),
                 api('/api/packages'),
                 api('/api/admin/bookings', { token }),
                 api('/api/admin/users', { token }),
                 api('/api/admin/team', { token }),
-                api('/api/admin/places', { token })
+                api('/api/admin/places', { token }),
+                api('/api/admin/purchased-routes', { token })
             ]);
             setEnquiries(enqData);
             setStats(statsData.stats);
@@ -1197,6 +1256,7 @@ export default function AdminPage() {
             setUsers(usersData);
             setTeamAdmins(teamData);
             setPlaces(placesData);
+            setPurchasedRoutes(routesData);
         } catch (e) {
             console.error('Data Refresh Error:', e);
             if (e.message?.includes('Unauthorized') || e.status === 401) {
@@ -1229,8 +1289,8 @@ export default function AdminPage() {
         setSuccess('');
         setLoading(true);
         try {
-            const res = await api('/api/admin/request-access', { method: 'POST', body: form });
-            setSuccess(res.message);
+            await api('/api/admin/request-access', { method: 'POST', body: form });
+            setSuccess('Request submitted successfully! Please wait for administrator approval.');
             setTimeout(() => setStep('login'), 3000);
         } catch (e) {
             setError(e.message || 'Request failed. Please try again.');
@@ -1269,6 +1329,46 @@ export default function AdminPage() {
         } catch (e) { 
             setError(e.message || 'Verification code is invalid or expired.');
             console.error('[VERIFY_ERROR]', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+        setLoading(true);
+        try {
+            await api('/api/admin/forgot-password', { method: 'POST', body: { email: form.email } });
+            setSuccess('Password reset code has been sent to your email.');
+            setStep('reset-password');
+        } catch (e) {
+            setError(e.message || 'Failed to send reset code.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+        setLoading(true);
+        if (form.newPassword !== form.confirmPassword) {
+            setError('Passwords do not match');
+            setLoading(false);
+            return;
+        }
+        try {
+            await api('/api/admin/reset-password', { 
+                method: 'POST', 
+                body: { email: form.email, code: otp, newPassword: form.newPassword } 
+            });
+            setSuccess('Password reset successful. Please login with your new password.');
+            setTimeout(() => setStep('login'), 3000);
+        } catch (e) {
+            setError(e.message || 'Password reset failed.');
         } finally {
             setLoading(false);
         }
@@ -1339,7 +1439,8 @@ export default function AdminPage() {
                         </button>
                     </form>
 
-                    <div className="mt-8 text-center">
+                    <div className="mt-8 text-center space-y-2">
+                        <button onClick={() => setStep('forgot-password')} className="text-xs text-slate-500 hover:text-emerald-600 font-bold hover:underline transition-colors block w-full">Forgot Password?</button>
                         <p className="text-xs text-slate-500">Need administrative access? <button onClick={() => setStep('register')} className="text-emerald-600 font-bold hover:underline">Request Account</button></p>
                     </div>
 
@@ -1347,6 +1448,109 @@ export default function AdminPage() {
                         <p className="text-[10px] font-bold uppercase tracking-widest">Copyright {new Date().getFullYear()} Kalindi Corporate Systems</p>
                     </footer>
                 </div>
+            </div>
+        </div>
+    );
+
+    if (step === 'forgot-password') return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+            <div className="w-full max-w-sm bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-slate-100 text-center">
+                <header className="mb-10 text-center">
+                    <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Reset Password</h2>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Enter email to receive reset code</p>
+                </header>
+
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Admin Email</label>
+                        <input 
+                            type="email" 
+                            placeholder="admin@kalinditrails.com" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, email: e.target.value})} 
+                            required
+                        />
+                    </div>
+
+                    {error && <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-bold text-red-600">{error}</div>}
+                    {success && <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-bold text-emerald-600">{success}</div>}
+
+                    <button 
+                        disabled={loading} 
+                        className="w-full bg-slate-900 text-white py-4 rounded-lg text-sm font-bold uppercase tracking-widest shadow-lg hover:bg-black transition-all disabled:opacity-50"
+                    >
+                        {loading ? 'Sending Code...' : 'Send Reset Code'}
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => setStep('login')} 
+                        className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center gap-1 w-full"
+                    >
+                        Return to Login
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+
+    if (step === 'reset-password') return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+            <div className="w-full max-w-sm bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-slate-100">
+                <header className="mb-10 text-center">
+                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">New Password</h2>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Secure your account</p>
+                </header>
+
+                <form onSubmit={handleResetPassword} className="space-y-6">
+                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
+                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 block">Reset Code</label>
+                        <input 
+                            value={otp} 
+                            onChange={e => setOtp(e.target.value)} 
+                            maxLength={6} 
+                            placeholder="0 0 0 0 0 0" 
+                            className="w-full bg-transparent text-3xl text-center font-bold outline-none tracking-[0.2em] placeholder:text-slate-200" 
+                        />
+                    </div>
+
+                    <div className="space-y-4">
+                        <input 
+                            type="password"
+                            placeholder="New Password" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, newPassword: e.target.value})} 
+                            required
+                        />
+                         <input 
+                            type="password"
+                            placeholder="Confirm Password" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all" 
+                            onChange={e => setForm({...form, confirmPassword: e.target.value})} 
+                            required
+                        />
+                    </div>
+
+                    {error && <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-bold text-red-600 text-center">{error}</div>}
+
+                    <div className="flex flex-col gap-4">
+                        <button 
+                            disabled={loading} 
+                            className="w-full bg-slate-900 text-white py-4 rounded-lg text-sm font-bold uppercase tracking-widest shadow-lg hover:bg-black transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Updating...' : 'Update Password'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
@@ -1522,7 +1726,8 @@ export default function AdminPage() {
                         { id: 'places', label: 'Custom Places', icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' },
                         { id: 'users', label: 'Travelers', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
                         { id: 'admins', label: 'Team', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', badge: pendingAdminsCount },
-                        { id: 'enquiries', label: 'Enquiries', icon: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z', badge: unreadCount }
+                        { id: 'enquiries', label: 'Enquiries', icon: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z', badge: unreadCount },
+                        { id: 'purchased_routes', label: 'Purchased Routes', icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' }
                     ].map(item => (
                         <button 
                             key={item.id}
@@ -1614,6 +1819,13 @@ export default function AdminPage() {
                             {view === 'enquiries' && (
                                 <EnquiriesView 
                                     enquiries={enquiries} 
+                                    onRefresh={refreshData} 
+                                    isLoading={dataLoading}
+                                />
+                            )}
+                            {view === 'purchased_routes' && (
+                                <PurchasedRoutesView 
+                                    routes={purchasedRoutes} 
                                     onRefresh={refreshData} 
                                     isLoading={dataLoading}
                                 />
