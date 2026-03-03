@@ -100,6 +100,60 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const pool = await getPool();
+    const [admins] = await pool.query('SELECT * FROM admins WHERE email = ?', [email]);
+    if (!admins.length) return res.status(404).json({ error: 'No admin account found with this email' });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    await pool.query('DELETE FROM user_otps WHERE user_email = ?', [email]);
+    await pool.query('INSERT INTO user_otps (user_email, otp_code, expires_at) VALUES (?, ?, ?)', [email, code, expires]);
+
+    await sendMail({
+      to: email,
+      subject: 'Admin Password Reset Code',
+      html: `
+        <div style="font-family: sans-serif; padding: 40px; background-color: #1a2e1a; color: white; border-radius: 8px;">
+          <h2 style="color: #c5a059;">Password Reset Request</h2>
+          <p>You requested to reset your password for the Kalindi Admin Dashboard. Use the following code:</p>
+          <div style="font-size: 32px; letter-spacing: 12px; font-weight: bold; margin: 30px 0; color: #c5a059;">${code}</div>
+          <p style="font-size: 12px; opacity: 0.6;">Expires in 10 minutes.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Reset code sent to your email', email });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) return res.status(400).json({ error: 'All fields are required' });
+
+    const pool = await getPool();
+    const [otps] = await pool.query('SELECT * FROM user_otps WHERE user_email = ? AND otp_code = ? AND expires_at > NOW()', [email, code]);
+    
+    if (!otps.length) return res.status(400).json({ error: 'Invalid or expired code' });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE admins SET password_hash = ? WHERE email = ?', [hash, email]);
+    await pool.query('DELETE FROM user_otps WHERE user_email = ?', [email]);
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post('/request-access', async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;

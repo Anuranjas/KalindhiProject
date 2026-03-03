@@ -27,7 +27,7 @@ CREATE TABLE `admins` (
 
 -- Seed: Main Admin
 INSERT INTO `admins` (`name`, `email`, `password_hash`, `is_approved`) 
-VALUES ('Main Admin', 'kalinditouristpackages@gmail.com', '$2a$10$padFeICpFWRLHKiOMf/dO.0zddsU6hsvGapApGuJDWoei6EUkQhNO', 1)
+VALUES ('Main Admin', 'kalinditouristpackages@gmail.com', '$2a$10$C/DkELhduhEMYm95zfFqrO7Yb1JUyJaP5lR5AjxG9aaPkgUiBAqOe', 1)
 ON DUPLICATE KEY UPDATE is_approved = 1;
 
 -- ------------------------------------------------------
