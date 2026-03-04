@@ -70,7 +70,7 @@ router.post('/', authenticate, async (req, res) => {
       await sendMail({
         to: userEmail,
         subject: `Booking & Payment Confirmed: ${pkgName} - Kalindi`,
-        text: `Hi ${userName},\n\nYour booking and payment for "${pkgName}" is confirmed for ${package_date}.${placesList}\n\nDetails:\nPackage: ${pkgName}\nDate: ${package_date}\nPeople: ${people_count}\nTransport: ${transport_mode}\nStatus: Paid\n\nOur concierge will contact you with the itinerary details shortly.\n\nWarm regards,\nKalindi Team`,
+        text: `Hi ${userName},\n\nYour booking and payment for "${pkgName}" is confirmed for ${package_date}.${placesList}\n\nDetails:\nPackage: ${pkgName}\nDate: ${package_date}\nPeople: ${people_count}\nTransport: ${transport_mode}\nAmount Paid: ₹${finalPrice.toLocaleString('en-IN')}\nStatus: Paid\n\nOur concierge will contact you with the itinerary details shortly.\n\nWarm regards,\nKalindi Team`,
         html: `
           <div style="font-family: serif; color: #1a2e1a; padding: 40px; background-color: #fdfaf5; border: 1px solid #c5a059; max-width: 600px; margin: 0 auto;">
             <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 10px; margin-bottom: 30px;">Confirmed Reservation & Payment</p>
@@ -83,7 +83,15 @@ router.post('/', authenticate, async (req, res) => {
               <p style="margin: 5px 0;"><strong>Travelers:</strong> ${people_count}</p>
               <p style="margin: 5px 0;"><strong>Navigation:</strong> ${transport_mode}</p>
               ${placesHtml}
-              <p style="margin: 5px 0;"><strong>Payment:</strong> <span style="color: #1a2e1a; font-weight: bold;">Confirmed</span></p>
+              <p style="margin: 5px 0;"><strong>Amount Paid:</strong> ₹${finalPrice.toLocaleString('en-IN')}</p>
+              <p style="margin: 5px 0;"><strong>Payment Status:</strong> <span style="color: #1a2e1a; font-weight: bold;">Confirmed</span></p>
+            </div>
+
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="${process.env.CLIENT_ORIGIN || 'http://localhost:5173'}/profile" 
+                 style="background-color: #c5a059; color: white; padding: 18px 45px; text-decoration: none; font-size: 14px; font-family: 'Times New Roman', serif; text-transform: uppercase; letter-spacing: 3px; border-radius: 0px; display: inline-block; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                Finalize & Place Your Order
+              </a>
             </div>
 
             <p style="font-size: 14px; line-height: 1.6;">Our concierge is currently curating your personal itinerary. A detailed dossier will be sent to your email within 24 hours.</p>

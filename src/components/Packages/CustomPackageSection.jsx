@@ -4,9 +4,15 @@ import { useNavigate } from 'react-router-dom';
 
 export default function CustomPackageSection() {
   const [places, setPlaces] = useState([]);
+  const [search, setSearch] = useState('');
+  const [startSearch, setStartSearch] = useState('');
+  const [endSearch, setEndSearch] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [middle, setMiddle] = useState([]);
+  const [showStartDropdown, setShowStartDropdown] = useState(false);
+  const [showEndDropdown, setShowEndDropdown] = useState(false);
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,8 +30,53 @@ export default function CustomPackageSection() {
     navigate(`/book?${query.toString()}`);
   };
 
+  const handleDragStart = (e, index) => {
+    setDraggedItemIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedItemIndex === null || draggedItemIndex === index) return;
+
+    const newMiddle = [...middle];
+    const itemToMove = newMiddle[draggedItemIndex];
+    newMiddle.splice(draggedItemIndex, 1);
+    newMiddle.splice(index, 0, itemToMove);
+    
+    setDraggedItemIndex(index);
+    setMiddle(newMiddle);
+  };
+
   const selectedStart = useMemo(() => places.find(p => p.id === Number(start)), [places, start]);
   const selectedEnd = useMemo(() => places.find(p => p.id === Number(end)), [places, end]);
+
+  const filteredStartPlaces = useMemo(() => {
+    if (!startSearch) return places;
+    const term = startSearch.toLowerCase();
+    return places.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      p.district.toLowerCase().includes(term)
+    );
+  }, [places, startSearch]);
+
+  const filteredEndPlaces = useMemo(() => {
+    if (!endSearch) return places;
+    const term = endSearch.toLowerCase();
+    return places.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      p.district.toLowerCase().includes(term)
+    );
+  }, [places, endSearch]);
+
+  const filteredPlaces = useMemo(() => {
+    if (!search) return places;
+    const term = search.toLowerCase();
+    return places.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      p.district.toLowerCase().includes(term)
+    );
+  }, [places, search]);
 
   return (
     <section className="py-24 bg-white relative overflow-hidden">
@@ -43,32 +94,101 @@ export default function CustomPackageSection() {
             <div className="space-y-8">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-primary/70 mb-3">1. Starting Point</label>
-                <select 
-                  value={start} 
-                  onChange={(e) => setStart(e.target.value)}
-                  className="w-full bg-white border border-primary/10 rounded-xl px-4 py-3 outline-none focus:border-accent/50 transition-colors"
-                >
-                  <option value="">Choose departure location...</option>
-                  {places.map(p => <option key={p.id} value={p.id}>{p.name} ({p.district})</option>)}
-                </select>
+                <div className="relative">
+                  <input 
+                    type="text"
+                    placeholder="Search departure location..."
+                    value={startSearch || (selectedStart ? selectedStart.name : '')}
+                    onFocus={() => {
+                        setShowStartDropdown(true);
+                        setStartSearch('');
+                    }}
+                    onChange={(e) => {
+                      setStartSearch(e.target.value);
+                      setShowStartDropdown(true);
+                    }}
+                    className="w-full bg-white border border-primary/10 rounded-xl px-4 py-3 outline-none focus:border-accent/50 transition-colors"
+                  />
+                  {showStartDropdown && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-primary/10 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
+                      {filteredStartPlaces.length > 0 ? (
+                        filteredStartPlaces.map(p => (
+                          <div 
+                            key={p.id}
+                            onClick={() => {
+                              setStart(p.id.toString());
+                              setStartSearch(p.name);
+                              setShowStartDropdown(false);
+                            }}
+                            className="px-4 py-2 hover:bg-primary/5 cursor-pointer text-sm"
+                          >
+                            {p.name} <span className="text-[10px] text-primary/40 ml-2">({p.district})</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-[10px] text-primary/40 uppercase">No locations found</div>
+                      )}
+                    </div>
+                  )}
+                  {showStartDropdown && <div className="fixed inset-0 z-10" onClick={() => setShowStartDropdown(false)} />}
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-primary/70 mb-3">2. Final Destination</label>
-                <select 
-                  value={end} 
-                  onChange={(e) => setEnd(e.target.value)}
-                  className="w-full bg-white border border-primary/10 rounded-xl px-4 py-3 outline-none focus:border-accent/50 transition-colors"
-                >
-                  <option value="">Choose your destination...</option>
-                  {places.map(p => <option key={p.id} value={p.id}>{p.name} ({p.district})</option>)}
-                </select>
+                <div className="relative">
+                  <input 
+                    type="text"
+                    placeholder="Search your destination..."
+                    value={endSearch || (selectedEnd ? selectedEnd.name : '')}
+                    onFocus={() => {
+                        setShowEndDropdown(true);
+                        setEndSearch('');
+                    }}
+                    onChange={(e) => {
+                      setEndSearch(e.target.value);
+                      setShowEndDropdown(true);
+                    }}
+                    className="w-full bg-white border border-primary/10 rounded-xl px-4 py-3 outline-none focus:border-accent/50 transition-colors"
+                  />
+                  {showEndDropdown && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-primary/10 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
+                      {filteredEndPlaces.length > 0 ? (
+                        filteredEndPlaces.map(p => (
+                          <div 
+                            key={p.id}
+                            onClick={() => {
+                              setEnd(p.id.toString());
+                              setEndSearch(p.name);
+                              setShowEndDropdown(false);
+                            }}
+                            className="px-4 py-2 hover:bg-primary/5 cursor-pointer text-sm"
+                          >
+                            {p.name} <span className="text-[10px] text-primary/40 ml-2">({p.district})</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-[10px] text-primary/40 uppercase">No locations found</div>
+                      )}
+                    </div>
+                  )}
+                  {showEndDropdown && <div className="fixed inset-0 z-10" onClick={() => setShowEndDropdown(false)} />}
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-primary/70 mb-3">3. Places to Visit in Between</label>
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search places or districts..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-white border border-primary/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent/50 transition-colors"
+                  />
+                </div>
                 <div className="grid sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-2 pb-2 custom-scrollbar">
-                  {places.filter(p => p.id !== Number(start) && p.id !== Number(end)).map(place => {
+                  {filteredPlaces.filter(p => p.id !== Number(start) && p.id !== Number(end)).map(place => {
                     const isSelected = middle.some(m => m.id === place.id);
                     return (
                       <label 
@@ -119,11 +239,27 @@ export default function CustomPackageSection() {
                   )}
 
                   {middle.map((m, idx) => (
-                    <div key={m.id} className="flex gap-4 relative">
-                      <div className="w-6 h-6 rounded-full bg-white/20 flex-shrink-0 border-4 border-primary z-10"></div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest text-white/50">Stop {idx + 1}</p>
-                        <p className="text-base">{m.name}</p>
+                    <div 
+                      key={m.id} 
+                      className={`flex gap-4 relative cursor-move group/item transition-all ${draggedItemIndex === idx ? 'opacity-40 scale-95' : 'opacity-100'}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={() => setDraggedItemIndex(null)}
+                    >
+                      <div className="w-6 h-6 rounded-full bg-white/20 flex-shrink-0 border-4 border-primary z-10 group-hover/item:border-accent/40 transition-colors"></div>
+                      <div className="flex-grow">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-white/50">Stop {idx + 1}</p>
+                            <p className="text-base group-hover/item:text-accent transition-colors">{m.name}</p>
+                          </div>
+                          <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="Ref: M4 8h16M4 16h16" />
+                             </svg>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}

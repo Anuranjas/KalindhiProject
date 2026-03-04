@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import backwaters from '../assets/hero/backwaters.jpg';
 import cultural from '../assets/hero/cultural.jpg';
 import waterfalls from '../assets/hero/waterfalls.jpg';
+import munnar from '../assets/about/munnar.jpg';
+import waynad from '../assets/about/waynad.jpg';
 
 export default function About() {
   return (
@@ -60,8 +61,8 @@ export default function About() {
             <div className="grid grid-cols-12 grid-rows-12 h-[500px] md:h-[700px] gap-4">
               <div className="col-span-8 row-span-8 overflow-hidden rounded-sm shadow-2xl">
                 <img
-                  src={backwaters}
-                  alt="Backwaters"
+                  src={waynad}
+                  alt="Backwaters replacement"
                   className="h-full w-full object-cover transition-transform duration-1000 hover:scale-110"
                 />
               </div>

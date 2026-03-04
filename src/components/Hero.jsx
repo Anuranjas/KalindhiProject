@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import img1 from '../assets/hero/backwaters.jpg';
-import img2 from '../assets/hero/waterfalls.jpg';
-import img3 from '../assets/hero/cultural.jpg';
+import img1 from '../assets/hero/waterfalls.jpg';
+import img2 from '../assets/hero/cultural.jpg';
+import img3 from '../assets/hero/waynad.jpg';
 
-const HERO_IMAGES = [img1, img2, img3,];
+const HERO_IMAGES = [img1, img2, img3];
 
 export default function Hero() {
   const [index, setIndex] = useState(0);
